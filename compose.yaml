@@ -1,0 +1,7 @@
+﻿services:
+  hassil.api:
+    image: hassil.api
+    build:
+      context: .
+#      dockerfile: Hassil.Api/Dockerfile
+
