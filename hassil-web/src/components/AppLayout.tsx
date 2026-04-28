@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Icon from './Icon'
 import Logo from './Logo'
 import { mockUsers, mockApi } from '../data/mockApi'
-import { useEffect, useState } from 'react'
 
 interface AppLayoutProps {
     children: ReactNode
@@ -26,14 +25,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const navigate = useNavigate()
     const location = useLocation()
     const path = location.pathname
-    const [pendingToken, setPendingToken] = useState<string | null>(null)
 
-    useEffect(() => {
-        mockApi.listInvoices().then((res) => {
-            const token = res.data.find((inv) => inv.clientConfirmation?.status === 'Pending')?.clientConfirmation?.token ?? null
-            setPendingToken(token)
-        })
-    }, [path]) // refresh on navigation so badge stays current
+    // Read synchronously from live in-memory state — always up to date
+    const pendingToken = mockApi.getPendingConfirmationToken()
 
     const navItems = [
         { path: '/dashboard', label: 'Home', icon: 'home' as const },
@@ -46,11 +40,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const pageTitle = pageTitleMap.find(([key]) => path.startsWith(key))?.[1] ?? 'Hassil'
 
     const goClientLink = () => {
-        if (pendingToken) {
-            navigate(`/client/confirm/${pendingToken}`)
+        const token = mockApi.getPendingConfirmationToken()
+        if (token) {
+            navigate(`/client/confirm/${token}`)
         } else {
-            // No pending token — go to invoices so user can create one
-            navigate('/invoices')
+            navigate('/advances/adv-002') // fallback to the seeded factoring advance
         }
     }
 
@@ -59,7 +53,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <header className="app-header">
                 <div className="app-header-main">
                     <div className="brand-cluster">
-                        <Logo onClick={() => navigate('/dashboard')} />
+                        <Logo onClick={() => navigate('/')} />
                     </div>
                     <div className="header-context">
                         <strong>{pageTitle}</strong>

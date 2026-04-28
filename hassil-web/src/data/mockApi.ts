@@ -602,6 +602,11 @@ export const mockApi = {
     getClients(): Promise<ApiResponse<Client[]>> {
         return Promise.resolve(ok(mockClients))
     },
+
+    // Sync helper — reads live in-memory state without a Promise
+    getPendingConfirmationToken(): string | null {
+        return _invoices.find((inv) => inv.clientConfirmation?.status === 'Pending')?.clientConfirmation?.token ?? null
+    },
 }
 
 // ─── Utility helpers (shared with pages) ─────────────────────────────────────
