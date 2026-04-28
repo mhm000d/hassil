@@ -825,38 +825,13 @@ function AppLayout({
             <Logo onClick={() => go('landing')} />
           </div>
 
-          <nav className="top-nav" aria-label="Main navigation">
-            {navItems.map((item) => (
-              <button
-                key={item.page}
-                className={`nav-item pill-nav ${item.active ? 'active' : ''}`}
-                onClick={() => go(item.page)}
-              >
-                {item.label}
-                {!!item.badge && <span className="nav-badge">{item.badge}</span>}
-              </button>
-            ))}
-            {pendingToken && (
-              <button className="nav-item pill-nav" onClick={() => go('clientConfirmation', { token: pendingToken })}>
-                Client Link
-              </button>
-            )}
-          </nav>
-
-          <div className="top-actions">
-            <button className="btn btn-primary" onClick={() => go('newInvoice')}><Icon name="plus" /> Create Invoice</button>
-          </div>
-        </div>
-
-        <div className="workspace-strip">
-          <div className="workspace-context">
-            <span className="workspace-page">{pageTitleMap[state.currentPage] || 'Hassil'}</span>
-            <span className="workspace-divider" />
-            <span className="workspace-model">{model}</span>
-            <span className="workspace-status">{currentUser.role === 'Admin' ? 'Review console' : 'Verified'}</span>
+          <div className="header-context">
+            <strong>{pageTitleMap[state.currentPage] || 'Hassil'}</strong>
+            <span>{model}</span>
+            <em>{currentUser.role === 'Admin' ? 'Review console' : 'Verified profile'}</em>
           </div>
 
-          <div className="workspace-controls">
+          <div className="top-actions header-actions">
             <label className="profile-select" htmlFor="demo-user">
               <span>Profile</span>
               <select id="demo-user" value={currentUser.id} onChange={(event) => setCurrentUser(event.target.value)}>
@@ -876,9 +851,57 @@ function AppLayout({
                 <button className="btn btn-secondary btn-sm" onClick={resetDemo}>Reset Data</button>
               </div>
             </details>
+            <button className="btn btn-primary" onClick={() => go('newInvoice')}><Icon name="plus" /> Create Invoice</button>
           </div>
         </div>
+
+        <nav className="top-nav mobile-nav" aria-label="Main navigation">
+          {navItems.map((item) => (
+            <button
+              key={item.page}
+              className={`nav-item pill-nav ${item.active ? 'active' : ''}`}
+              onClick={() => go(item.page)}
+            >
+              {item.label}
+              {!!item.badge && <span className="nav-badge">{item.badge}</span>}
+            </button>
+          ))}
+          {pendingToken && (
+            <button className="nav-item pill-nav" onClick={() => go('clientConfirmation', { token: pendingToken })}>
+              Client Link
+            </button>
+          )}
+        </nav>
       </header>
+
+      <aside className="app-rail" aria-label="Workspace navigation">
+        <div className="rail-profile">
+          <div className="rail-avatar"><Icon name="check" /></div>
+          <div>
+            <strong>{getUserDisplayName(currentUser)}</strong>
+            <span>Trust score {currentUser.trustScore}</span>
+          </div>
+        </div>
+        <nav className="rail-nav">
+          {navItems.map((item) => (
+            <button key={item.page} className={item.active ? 'active' : ''} onClick={() => go(item.page)}>
+              <Icon name={item.page === 'dashboard' ? 'chart' : item.page === 'invoices' ? 'doc' : item.page === 'adminReview' ? 'review' : 'open'} />
+              {item.label}
+              {!!item.badge && <span>{item.badge}</span>}
+            </button>
+          ))}
+          {pendingToken && (
+            <button onClick={() => go('clientConfirmation', { token: pendingToken })}>
+              <Icon name="open" />
+              Client Link
+            </button>
+          )}
+        </nav>
+        <div className="rail-footer">
+          <button className="btn btn-primary full-width" onClick={() => go('newInvoice')}><Icon name="plus" /> New Invoice</button>
+          <button className="rail-link" onClick={() => go('ledger')}><Icon name="open" /> Support trail</button>
+        </div>
+      </aside>
 
       <main className="app-main">
         <div className="page-content">
@@ -904,15 +927,17 @@ function DashboardPage({ state, user, go }: { state: AppState; user: User; go: G
   return (
     <>
       <PageHeading
-        title={`Welcome back, ${getUserDisplayName(user)}`}
-        description={`${model} workspace for invoices, advances, cash flow, and settlement activity.`}
+        title="Dashboard"
+        description={`${getUserDisplayName(user)} · ${model}`}
       />
-      <section className="stat-grid">
-        <StatCard tone="gold" label="Outstanding invoices" value={formatCurrency(outstanding)} sub={`${userInvoices.length} invoice records`} />
-        <StatCard tone="blue" label="Active advances" value={String(activeAdvances.length)} sub="Pending, approved, or funded" />
-        <StatCard tone="green" label="Available balance" value={formatCurrency(balance)} sub="Ledger balance" />
-        <StatCard tone="amber" label="Trust score" value={`${user.trustScore}/100`} sub={getTrustScoreLabel(user.trustScore)} />
-      </section>
+      <DashboardHero
+        state={state}
+        user={user}
+        outstanding={outstanding}
+        activeAdvances={activeAdvances.length}
+        balance={balance}
+        go={go}
+      />
       <div className="grid-2 wide-left">
         <div className="card">
           <div className="card-header">
@@ -937,22 +962,73 @@ function DashboardPage({ state, user, go }: { state: AppState; user: User; go: G
             ])}
           />
         </div>
-        <div className="card card-gold">
-          <h2 className="card-title">Next steps</h2>
-          <div className="model-summary-list">
-            <div><strong>1.</strong> Open or create an invoice.</div>
-            <div><strong>2.</strong> Review the advance quote.</div>
-            <div><strong>3.</strong> Confirm the client step when required.</div>
-            <div><strong>4.</strong> Track funding and settlement.</div>
-          </div>
-          <button className="btn btn-primary full-width mt-16" onClick={() => go('newInvoice')}><Icon name="plus" /> Create Invoice</button>
+        <div className="card">
+          <div className="card-header"><h2 className="card-title">Recent ledger</h2><button className="btn btn-secondary btn-sm" onClick={() => go('ledger')}>Open</button></div>
+          <TransactionTimeline transactions={recentTx} />
         </div>
       </div>
-      <div className="card mt-24">
-        <div className="card-header"><h2 className="card-title">Recent ledger activity</h2><button className="btn btn-secondary btn-sm" onClick={() => go('ledger')}>Open ledger</button></div>
-        <TransactionTimeline transactions={recentTx} />
-      </div>
     </>
+  );
+}
+
+function DashboardHero({
+  state,
+  user,
+  outstanding,
+  activeAdvances,
+  balance,
+  go,
+}: {
+  state: AppState;
+  user: User;
+  outstanding: number;
+  activeAdvances: number;
+  balance: number;
+  go: GoTo;
+}) {
+  const openInvoices = state.invoices.filter((invoice) => invoice.userId === user.id && invoice.status !== 'Paid' && invoice.status !== 'Rejected');
+  const availableNow = openInvoices.reduce((sum, invoice) => sum + calculateQuote(user, invoice).advanceAmount, 0);
+  const pendingAmount = state.advanceRequests
+    .filter((advance) => advance.userId === user.id && !['Repaid', 'Rejected'].includes(advance.status))
+    .reduce((sum, advance) => sum + advance.advanceAmount, 0);
+  const recentEarnings = state.transactions
+    .filter((tx) => tx.userId === user.id && tx.direction === 'Credit')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  const firstOpenInvoice = openInvoices.find((invoice) => !invoice.advanceRequestId) || openInvoices[0];
+
+  return (
+    <section className="dashboard-hero">
+      <div className="hero-main-card">
+        <div className="hero-card-label">Available to advance</div>
+        <strong>{formatCurrency(availableNow)}</strong>
+        <p>{openInvoices.length} open receivables eligible under current trust limits.</p>
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={() => (firstOpenInvoice ? go('advanceRequest', { invoiceId: firstOpenInvoice.id }) : go('newInvoice'))}
+        >
+          <Icon name="advance" /> {firstOpenInvoice ? 'Request advance' : 'Create invoice'}
+        </button>
+        <div className="hero-watermark"><Icon name="chart" /></div>
+      </div>
+      <div className="hero-mini-card">
+        <span>Pending advances</span>
+        <strong>{formatCurrency(pendingAmount)}</strong>
+        <div className="mini-progress"><i style={{ width: `${Math.min(100, activeAdvances * 32)}%` }} /></div>
+        <p>{activeAdvances} active request{activeAdvances === 1 ? '' : 's'}</p>
+      </div>
+      <div className="hero-mini-card">
+        <span>Recent earnings</span>
+        <strong>{formatCurrency(recentEarnings || balance)}</strong>
+        <div className="mini-bars" aria-hidden="true">
+          <i style={{ height: '34%' }} />
+          <i style={{ height: '54%' }} />
+          <i style={{ height: '78%' }} />
+          <i style={{ height: '48%' }} />
+          <i style={{ height: '92%' }} />
+        </div>
+        <p>{formatCurrency(outstanding)} still outstanding</p>
+      </div>
+    </section>
   );
 }
 
@@ -1077,22 +1153,28 @@ function InvoiceDetailPage({
   return (
     <>
       <Breadcrumbs items={[{ label: 'Invoices', onClick: () => go('invoices') }, { label: invoice.invoiceNumber }]} />
-      <PageHeading title={`Invoice ${invoice.invoiceNumber}`} description="Review invoice details, evidence, and advance readiness." />
+      <PageHeading title="Invoice details" description={`${invoice.invoiceNumber} · ${invoice.client.name}`} />
       <div className="grid-2 wide-left">
         <div className="card">
-          <div className="card-header"><h2 className="card-title">Invoice details</h2><StatusBadge status={invoice.status} /></div>
+          <div className="card-header"><h2 className="card-title">Summary</h2><StatusBadge status={invoice.status} /></div>
           <DetailGrid
             items={[
               ['Client', `${invoice.client.name} · ${invoice.client.email}`],
               ['Amount', formatCurrency(invoice.amount, invoice.currency)],
-              ['Issue date', formatDate(invoice.issueDate)],
               ['Due date', formatDate(invoice.dueDate)],
-              ['Receivable source', sourceLabel(invoice.receivableSource)],
-              ['Fingerprint', invoice.fingerprint],
-              ['Description', invoice.description || 'No description'],
               ['Payment terms', invoice.paymentTerms || 'Not specified'],
             ]}
           />
+          <DisclosurePanel title="More invoice details">
+            <DetailGrid
+              items={[
+                ['Issue date', formatDate(invoice.issueDate)],
+                ['Receivable source', sourceLabel(invoice.receivableSource)],
+                ['Description', invoice.description || 'No description'],
+                ['Fingerprint', invoice.fingerprint],
+              ]}
+            />
+          </DisclosurePanel>
         </div>
         <div className="card card-gold">
           <h2 className="card-title">Advance option</h2>
@@ -1168,13 +1250,12 @@ function AdvanceDetailPage({ state, advanceId, go, simulateNextStep }: { state: 
   return (
     <>
       <Breadcrumbs items={[{ label: 'Invoices', onClick: () => go('invoices') }, { label: invoice.invoiceNumber, onClick: () => go('invoiceDetail', { invoiceId: invoice.id }) }, { label: 'Advance' }]} />
-      <PageHeading title="Advance detail" description="Track funding, repayment, and settlement status." />
+      <PageHeading title="Advance" description={`${invoice.invoiceNumber} · ${getModelLabel(advance.financingModel)}`} />
       <LifecycleStepper status={advance.status} model={advance.financingModel} />
       <section className="stat-grid">
         <StatCard tone="gold" label="Invoice amount" value={formatCurrency(invoice.amount, invoice.currency)} sub={invoice.invoiceNumber} />
         <StatCard tone="green" label="Advance amount" value={formatCurrency(advance.advanceAmount, invoice.currency)} sub={`${Math.round(advance.requestedPercent * 100)}% requested`} />
         <StatCard tone="amber" label="Flat fee" value={formatCurrency(advance.feeAmount, invoice.currency)} sub={`${(advance.feeRate * 100).toFixed(1)}% fixed upfront`} />
-        <StatCard tone="blue" label="Status" value={getStatusLabel(advance.status)} sub={getModelLabel(advance.financingModel)} />
       </section>
       <div className="grid-2 wide-left">
         <div className="card">
@@ -1188,12 +1269,18 @@ function AdvanceDetailPage({ state, advanceId, go, simulateNextStep }: { state: 
               ['Client', `${invoice.client.name} · ${invoice.client.email}`],
               ['Due date', formatDate(invoice.dueDate)],
               ['Repayment party', advance.repaymentParty === 'Client' ? 'Client pays Hassil' : 'User repays Hassil'],
-              ['Client notification', advance.clientNotificationRequired ? 'Required' : 'Not required'],
               ['Expected repayment', formatCurrency(advance.expectedRepaymentAmount, invoice.currency)],
-              ['Settlement buffer', formatCurrency(advance.settlementBufferAmount, invoice.currency)],
-              ['Review score', `${advance.reviewScore}/100`],
             ]}
           />
+          <DisclosurePanel title="More advance details">
+            <DetailGrid
+              items={[
+                ['Client notification', advance.clientNotificationRequired ? 'Required' : 'Not required'],
+                ['Settlement buffer', formatCurrency(advance.settlementBufferAmount, invoice.currency)],
+                ['Review score', `${advance.reviewScore}/100`],
+              ]}
+            />
+          </DisclosurePanel>
           {confirmationToken && advance.status === 'PendingClientConfirmation' && (
             <div className="quote-disclaimer mt-16">
               Client confirmation is required before funding.
@@ -1319,16 +1406,22 @@ function AdminReviewPage({ state, go, adminDecision }: { state: AppState; go: Go
               items={[
                 ['User type', user.accountType === 'SmallBusiness' ? 'Small Business' : 'Freelancer'],
                 ['Financing model', getModelLabel(selected.financingModel)],
-                ['Repayment party', selected.repaymentParty],
-                ['Client notification required', selected.clientNotificationRequired ? 'Yes' : 'No'],
                 ['Trust score', `${user.trustScore}/100`],
                 ['Invoice amount', formatCurrency(invoice.amount, invoice.currency)],
                 ['Requested advance', `${Math.round(selected.requestedPercent * 100)}% · ${formatCurrency(selected.advanceAmount, invoice.currency)}`],
                 ['Fee', `${(selected.feeRate * 100).toFixed(1)}% · ${formatCurrency(selected.feeAmount, invoice.currency)}`],
-                ['Client confirmation', invoice.clientConfirmation?.status || 'Not required'],
-                ['Supporting documents', `${invoice.documents.length}`],
               ]}
             />
+            <DisclosurePanel title="More review data">
+              <DetailGrid
+                items={[
+                  ['Repayment party', selected.repaymentParty],
+                  ['Client notification', selected.clientNotificationRequired ? 'Required' : 'Not required'],
+                  ['Client confirmation', invoice.clientConfirmation?.status || 'Not required'],
+                  ['Supporting documents', `${invoice.documents.length}`],
+                ]}
+              />
+            </DisclosurePanel>
             <ReviewScore score={selected.reviewScore} flags={flags} />
             <div className="form-actions">
               <button className="btn btn-danger" onClick={() => adminDecision(selected.id, 'Rejected')}><Icon name="reject" /> Reject</button>
@@ -1853,6 +1946,15 @@ function DetailGrid({ items }: { items: [string, React.ReactNode][] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function DisclosurePanel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <details className="disclosure-panel">
+      <summary>{title}</summary>
+      <div className="disclosure-content">{children}</div>
+    </details>
   );
 }
 
