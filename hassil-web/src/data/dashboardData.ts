@@ -1,116 +1,51 @@
 import type { DashboardAppState, DashboardUser } from '../types'
+import { mockUsers, mockInvoices, mockAdvanceRequests, mockTransactions } from './mockApi'
+
+const ahmed = mockUsers[0]
 
 export const dashboardUser: DashboardUser = {
-    id: 'user-1',
-    firstName: 'Ahmed',
-    lastName: 'Studio',
-    accountType: 'SmallBusiness',
-    role: 'User',
-    email: 'ahmed@studio.example',
-    trustScore: 60,
-    status: 'Active',
-    createdAt: '2026-01-01',
+    id: ahmed.id,
+    firstName: ahmed.smallBusinessProfile?.businessName?.split(' ')[0] ?? 'Ahmed',
+    lastName: ahmed.smallBusinessProfile?.businessName?.split(' ')[1] ?? 'Studio',
+    accountType: ahmed.accountType,
+    role: ahmed.role,
+    email: ahmed.email,
+    trustScore: ahmed.trustScore,
+    status: ahmed.status,
+    createdAt: ahmed.createdAt,
 }
 
 export const dashboardState: DashboardAppState = {
-    invoices: [
-        {
-            id: 'AHM-2026-018',
-            invoiceNumber: 'AHM-2026-018',
-            userId: 'user-1',
-            client: { name: 'Noura Retail Group' },
-            amount: 18000,
-            currency: 'USD',
-            status: 'Submitted',
-            advanceRequestId: 'ADV-102',
-        },
-        {
-            id: 'SAR-2026-028',
-            invoiceNumber: 'SAR-2026-028',
-            userId: 'user-1',
-            client: { name: 'Nabd Freelance Marketplace' },
-            amount: 2900,
-            currency: 'USD',
-            status: 'Pending Review',
-        },
-        {
-            id: 'AHM-2026-019',
-            invoiceNumber: 'AHM-2026-019',
-            userId: 'user-1',
-            client: { name: 'Noura Retail Group' },
-            amount: 12400,
-            currency: 'USD',
-            status: 'Pending Confirmation',
-        },
-        {
-            id: 'AHM-2026-020',
-            invoiceNumber: 'AHM-2026-020',
-            userId: 'user-1',
-            client: { name: 'Noura Retail Group' },
-            amount: 8500,
-            currency: 'USD',
-            status: 'Paid',
-        },
-    ],
-    advanceRequests: [
-        {
-            id: 'ADV-102',
-            userId: 'user-1',
-            status: 'Pending',
-            advanceAmount: 14400,
-            financingModel: 'InvoiceFactoring',
-        },
-        {
-            id: 'ADV-098',
-            userId: 'user-1',
-            status: 'Approved',
-            advanceAmount: 7200,
-            financingModel: 'InvoiceFactoring',
-        },
-        {
-            id: 'ADV-065',
-            userId: 'user-1',
-            status: 'Rejected',
-            advanceAmount: 5700,
-            financingModel: 'InvoiceDiscounting',
-        },
-    ],
-    transactions: [
-        {
-            id: 'TX-501',
-            userId: 'user-1',
-            type: 'Client Payment',
-            direction: 'Credit',
-            amount: 4200,
-            description: 'Client payment received',
-            date: 'Apr 28, 2026',
-        },
-        {
-            id: 'TX-502',
-            userId: 'user-1',
-            type: 'Advance Disbursed',
-            direction: 'Debit',
-            amount: 10800,
-            description: 'Advance disbursed',
-            date: 'Apr 26, 2026',
-        },
-        {
-            id: 'TX-503',
-            userId: 'user-1',
-            type: 'Platform Fee',
-            direction: 'Debit',
-            amount: 320,
-            description: 'Platform fee',
-            date: 'Apr 24, 2026',
-        },
-        {
-            id: 'TX-504',
-            userId: 'user-1',
-            type: 'Trust Adjustment',
-            direction: 'Credit',
-            amount: 0,
-            description: 'Trust score adjustment',
-            date: 'Apr 22, 2026',
-        },
-    ],
+    invoices: mockInvoices
+        .filter((inv) => inv.userId === ahmed.id)
+        .map((inv) => ({
+            id: inv.id,
+            invoiceNumber: inv.invoiceNumber,
+            userId: inv.userId,
+            client: { name: inv.client.name },
+            amount: inv.amount,
+            currency: inv.currency,
+            status: inv.status,
+            advanceRequestId: inv.advanceRequestId,
+        })),
+    advanceRequests: mockAdvanceRequests
+        .filter((adv) => adv.userId === ahmed.id)
+        .map((adv) => ({
+            id: adv.id,
+            userId: adv.userId,
+            status: adv.status,
+            advanceAmount: adv.advanceAmount,
+            financingModel: adv.financingModel,
+        })),
+    transactions: mockTransactions
+        .filter((tx) => tx.userId === ahmed.id)
+        .map((tx) => ({
+            id: tx.id,
+            userId: tx.userId,
+            type: tx.type,
+            direction: tx.direction,
+            amount: tx.amount,
+            description: tx.description ?? '',
+            date: new Date(tx.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        })),
 }

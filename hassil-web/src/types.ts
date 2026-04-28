@@ -198,6 +198,7 @@ export type PageName =
     | 'clientConfirmation'
     | 'adminReview'
     | 'ledger'
+    | 'cashFlow'
 
 export type DashboardUser = {
     id: string

@@ -1,41 +1,57 @@
 import type { ReactNode } from 'react'
-import type { DashboardAppState, DashboardUser, PageName } from '../types'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Icon from './Icon'
 import Logo from './Logo'
+import { mockUsers, mockApi } from '../data/mockApi'
+import { useEffect, useState } from 'react'
 
 interface AppLayoutProps {
-    state: DashboardAppState
-    currentUser: DashboardUser
-    currentPage: PageName
-    go: (target: string, params?: Record<string, unknown>) => void
     children: ReactNode
 }
 
-export default function AppLayout({ state, currentUser, currentPage, go, children }: AppLayoutProps) {
-    const model = currentUser.accountType === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'
-    const pendingReviews = state.advanceRequests.filter((adv) => adv.status === 'Pending').length
+const currentUser = mockUsers[0]
+
+const pageTitleMap: [string, string][] = [
+    ['/invoices/new', 'Create invoice'],
+    ['/invoices', 'Invoices'],
+    ['/advances', 'Advance detail'],
+    ['/cash-flow', 'Cash-flow forecast'],
+    ['/ledger', 'Ledger'],
+    ['/admin', 'Admin review'],
+    ['/client/confirm', 'Client confirmation'],
+    ['/dashboard', 'Dashboard'],
+]
+
+export default function AppLayout({ children }: AppLayoutProps) {
+    const navigate = useNavigate()
+    const location = useLocation()
+    const path = location.pathname
+    const [pendingToken, setPendingToken] = useState<string | null>(null)
+
+    useEffect(() => {
+        mockApi.listInvoices().then((res) => {
+            const token = res.data.find((inv) => inv.clientConfirmation?.status === 'Pending')?.clientConfirmation?.token ?? null
+            setPendingToken(token)
+        })
+    }, [path]) // refresh on navigation so badge stays current
+
     const navItems = [
-        { page: 'dashboard' as const, label: 'Home', active: currentPage === 'dashboard' },
-        { page: 'invoices' as const, label: 'Invoices', active: ['invoices', 'invoiceDetail', 'advanceRequest', 'advanceDetail', 'newInvoice'].includes(currentPage) },
-        { page: 'cashFlow' as const, label: 'Cash Flow', active: currentPage === 'cashFlow' },
-        { page: 'ledger' as const, label: 'Ledger', active: currentPage === 'ledger' },
-        { page: 'adminReview' as const, label: 'Admin', active: currentPage === 'adminReview', badge: pendingReviews },
-        { page: 'clientConfirmation' as const, label: 'Client Link', active: currentPage === 'clientConfirmation', badge: 1 },
+        { path: '/dashboard', label: 'Home', icon: 'home' as const },
+        { path: '/invoices', label: 'Invoices', icon: 'invoice' as const },
+        { path: '/cash-flow', label: 'Cash Flow', icon: 'cashflow' as const },
+        { path: '/ledger', label: 'Ledger', icon: 'ledger' as const },
+        { path: '/admin', label: 'Admin', icon: 'admin' as const },
     ]
 
-    const pageTitleMap: Record<PageName, string> = {
-        landing: 'Landing',
-        selectType: 'Select account type',
-        onboarding: 'Complete profile',
-        dashboard: 'Dashboard',
-        invoices: 'Invoices',
-        newInvoice: 'Create invoice',
-        invoiceDetail: 'Invoice detail',
-        advanceRequest: 'Advance quote',
-        advanceDetail: 'Advance detail',
-        clientConfirmation: 'Client link',
-        adminReview: 'Admin review',
-        ledger: 'Ledger',
+    const pageTitle = pageTitleMap.find(([key]) => path.startsWith(key))?.[1] ?? 'Hassil'
+
+    const goClientLink = () => {
+        if (pendingToken) {
+            navigate(`/client/confirm/${pendingToken}`)
+        } else {
+            // No pending token — go to invoices so user can create one
+            navigate('/invoices')
+        }
     }
 
     return (
@@ -43,20 +59,18 @@ export default function AppLayout({ state, currentUser, currentPage, go, childre
             <header className="app-header">
                 <div className="app-header-main">
                     <div className="brand-cluster">
-                        <Logo onClick={() => go('dashboard')} />
+                        <Logo onClick={() => navigate('/dashboard')} />
                     </div>
-
                     <div className="header-context">
-                        <strong>{pageTitleMap[currentPage] || 'Dashboard'}</strong>
-                        <span>{model}</span>
+                        <strong>{pageTitle}</strong>
+                        <span>{currentUser.accountType === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'}</span>
                         <em>Verified profile</em>
                     </div>
-
                     <div className="top-actions header-actions">
                         <button type="button" className="btn btn-ghost">
-                            {currentUser.firstName} {currentUser.lastName}
+                            {currentUser.smallBusinessProfile?.businessName ?? currentUser.freelancerProfile?.fullName ?? currentUser.email}
                         </button>
-                        <button type="button" className="btn btn-primary" onClick={() => go('newInvoice')}>
+                        <button type="button" className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
                             <Icon name="plus" /> Create Invoice
                         </button>
                     </div>
@@ -67,72 +81,50 @@ export default function AppLayout({ state, currentUser, currentPage, go, childre
                 <div className="rail-profile">
                     <div className="rail-avatar"><Icon name="check" /></div>
                     <div>
-                        <strong>{currentUser.firstName} {currentUser.lastName}</strong>
+                        <strong>{currentUser.smallBusinessProfile?.businessName ?? currentUser.freelancerProfile?.fullName ?? currentUser.email}</strong>
                         <span>Trust score {currentUser.trustScore}</span>
                     </div>
                 </div>
                 <nav className="rail-nav">
                     {navItems.map((item) => {
-                        const iconMap: Record<string, import('./Icon').IconName> = {
-                            dashboard: 'home',
-                            invoices: 'invoice',
-                            cashFlow: 'cashflow',
-                            ledger: 'ledger',
-                            adminReview: 'admin',
-                            clientConfirmation: 'link',
-                        }
+                        const isActive =
+                            path === item.path ||
+                            (item.path !== '/dashboard' && path.startsWith(item.path))
                         return (
-                            <button key={item.page} className={item.active ? 'active' : ''} onClick={() => go(item.page)}>
-                                <Icon name={iconMap[item.page] ?? 'chart'} />
+                            <button
+                                key={item.path}
+                                className={isActive ? 'active' : ''}
+                                onClick={() => navigate(item.path)}
+                            >
+                                <Icon name={item.icon} />
                                 {item.label}
-                                {!!item.badge && <span>{item.badge}</span>}
                             </button>
                         )
                     })}
+                    <button
+                        className={path.startsWith('/client/confirm') ? 'active' : ''}
+                        onClick={goClientLink}
+                    >
+                        <Icon name="link" />
+                        Client Link
+                        {pendingToken && <span>1</span>}
+                    </button>
                 </nav>
                 <div className="rail-footer">
-                    <button className="btn btn-primary full-width" onClick={() => go('newInvoice')}><Icon name="plus" /> New Invoice</button>
-                    <button className="rail-link" onClick={() => go('ledger')}><Icon name="open" /> Support trail</button>
+                    <button className="rail-link" onClick={() => navigate('/ledger')}>
+                        <Icon name="ledger" /> Support trail
+                    </button>
+                    <button className="btn btn-secondary full-width" onClick={() => navigate('/')}>
+                        <Icon name="open" /> Logout
+                    </button>
                 </div>
             </aside>
 
             <main className="app-main">
                 <div className="page-content">
-                    <DemoGuide state={state} currentUser={currentUser} go={go} />
                     {children}
                 </div>
             </main>
-        </div>
-    )
-}
-
-function DemoGuide({ state, currentUser, go }: { state: DashboardAppState; currentUser: DashboardUser; go: (target: string, params?: Record<string, unknown>) => void }) {
-    const userInvoices = state.invoices.filter((invoice) => invoice.userId === currentUser.id)
-    const openInvoice = userInvoices.find((invoice) => !invoice.advanceRequestId && invoice.status !== 'Paid' && invoice.status !== 'Rejected')
-    const activeAdvance = state.advanceRequests.find((advance) => advance.userId === currentUser.id && advance.status === 'Pending')
-
-    let label = 'Create an invoice'
-    let description = 'Start with a receivable, then review the available advance.'
-    let action = () => go('newInvoice')
-
-    if (activeAdvance) {
-        label = 'Continue advance'
-        description = 'Move the active request through funding and settlement.'
-        action = () => go('advanceDetail', { advanceId: activeAdvance.id })
-    } else if (openInvoice) {
-        label = 'Request advance'
-        description = 'Use the open invoice to generate a quote.'
-        action = () => go('advanceRequest', { invoiceId: openInvoice.id })
-    }
-
-    return (
-        <div className="demo-guide">
-            <div>
-                <span className="small-label">Next demo action</span>
-                <strong>{label}</strong>
-                <p>{description}</p>
-            </div>
-            <button className="btn btn-secondary btn-sm" onClick={action}><Icon name="next" /> Continue</button>
         </div>
     )
 }
