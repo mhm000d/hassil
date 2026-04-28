@@ -3,7 +3,11 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+
+# Environment files
 .env
+.env.*
+!.env.example
 
 Commerce.Api/appsettings.json
 
