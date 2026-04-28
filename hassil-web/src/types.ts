@@ -198,7 +198,53 @@ export type PageName =
     | 'clientConfirmation'
     | 'adminReview'
     | 'ledger'
-    | 'cashFlow';
+
+export type DashboardUser = {
+    id: string
+    firstName: string
+    lastName: string
+    accountType: AccountType
+    role: UserRole
+    email: string
+    trustScore: number
+    status: UserStatus
+    createdAt: string
+}
+
+export interface DashboardInvoice {
+    id: string
+    invoiceNumber: string
+    userId: string
+    client: { name: string }
+    amount: number
+    currency: string
+    status: string
+    advanceRequestId?: string
+}
+
+export interface DashboardAdvanceRequest {
+    id: string
+    userId: string
+    status: string
+    advanceAmount: number
+    financingModel: FinancingModel
+}
+
+export interface DashboardTransaction {
+    id: string
+    userId: string
+    type: string
+    direction: TransactionDirection
+    amount: number
+    description: string
+    date: string
+}
+
+export interface DashboardAppState {
+    invoices: DashboardInvoice[]
+    advanceRequests: DashboardAdvanceRequest[]
+    transactions: DashboardTransaction[]
+}
 
 export interface Toast {
     id: string;

@@ -1,66 +1,55 @@
-import { useState } from 'react'
-import './App.css'
-import Home from './pages/Home'
-import Invoices from './pages/Invoices'
-import Advances from './pages/Advances'
-import Transactions from './pages/Transactions'
-import Profile from './pages/Profile'
-import Settings from './pages/Settings'
+import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom'
+import AppLayout from './components/AppLayout'
+import Dashboard from './pages/Dashboard'
+import { dashboardState, dashboardUser } from './data/dashboardData'
 
-const pages = [
-  'Home',
-  'Invoices',
-  'Advances',
-  'Transactions',
-  'Profile',
-  'Settings',
-] as const
+function LaunchScreen() {
+  const navigate = useNavigate()
 
-type PageName = (typeof pages)[number]
+  return (
+    <div className="page-content" style={{ minHeight: '60vh', display: 'grid', placeItems: 'center' }}>
+      <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+        Open Dashboard
+      </button>
+    </div>
+  )
+}
 
-function App() {
-  const [activePage, setActivePage] = useState<PageName>('Home')
+function AppContent() {
+  const navigate = useNavigate()
+  const go = (target: string, params?: Record<string, unknown>) => {
+    if (params) {
+      console.log('route params', params)
+    }
 
-  const renderPage = () => {
-    switch (activePage) {
-      case 'Invoices':
-        return <Invoices />
-      case 'Advances':
-        return <Advances />
-      case 'Transactions':
-        return <Transactions />
-      case 'Profile':
-        return <Profile />
-      case 'Settings':
-        return <Settings />
+    switch (target) {
+      case 'dashboard':
+        navigate('/dashboard')
+        break
+      case 'invoices':
+        navigate('/dashboard')
+        break
       default:
-        return <Home />
+        navigate('/dashboard')
     }
   }
 
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <div className="brand">Hassil</div>
-        <nav className="app-nav" aria-label="Main navigation">
-          {pages.map((page) => (
-            <button
-              key={page}
-              type="button"
-              className={page === activePage ? 'nav-item active' : 'nav-item'}
-              onClick={() => setActivePage(page)}
-            >
-              {page}
-            </button>
-          ))}
-        </nav>
-      </header>
-      <main className="app-content">{renderPage()}</main>
-      <footer className="app-footer">
-        <span>© {new Date().getFullYear()} Hassil</span>
-        <span>Designed for fast cash flow clarity</span>
-      </footer>
-    </div>
+    <AppLayout state={dashboardState} currentUser={dashboardUser} currentPage="dashboard" go={go}>
+      <Routes>
+        <Route path="/" element={<LaunchScreen />} />
+        <Route path="/dashboard" element={<Dashboard state={dashboardState} user={dashboardUser} go={go} />} />
+        <Route path="*" element={<LaunchScreen />} />
+      </Routes>
+    </AppLayout>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   )
 }
 
