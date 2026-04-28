@@ -1,4 +1,4 @@
-# SPEC-1-Hassil-Cash-Flow-Advance Brief
+# SPEC-1-Hassil-Cash-Flow Brief
 
 **[Spec-1 Hassil Cash Flow In Detail](./spec_1_hassil_cash_flow_in_detail.md)**
 * [Product Model](./spec_1_hassil_cash_flow_in_detail.md#2-product-model)
