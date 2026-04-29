@@ -1,6 +1,6 @@
 # Hassil Backend API Progress
 
-This document explains what the backend currently supports, how the existing endpoints should be used, and the recommended order for building the remaining features.
+This document explains what the backend currently supports, how the existing endpoints should be used, and the recommended next work.
 
 ## Table Of Contents
 
@@ -34,20 +34,21 @@ This document explains what the backend currently supports, how the existing end
   - [Request More Information](#request-more-information)
   - [Generate AI Review Summary](#generate-ai-review-summary)
   - [Get Trust Score Events](#get-trust-score-events)
+  - [Get Dashboard Summary](#get-dashboard-summary)
+  - [List Transactions](#list-transactions)
 - [Recommended Current Workflow](#recommended-current-workflow)
 - [Error Response Shape](#error-response-shape)
-- [Recommended Order For Remaining Features](#recommended-order-for-remaining-features)
-  - [1. Dashboard And Transactions](#1-dashboard-and-transactions)
+- [Recommended Next Work](#recommended-next-work)
 
 ## Current Backend Scope
 
 The backend currently covers the first working slice of the demo:
 
 ```text
-seed demo data -> demo login -> authorize requests -> create/list/submit invoices -> quote/create advances -> confirm factoring clients -> admin review -> simulate advances -> trust score history
+seed demo data -> demo login -> authorize requests -> create/list/submit invoices -> quote/create advances -> confirm factoring clients -> admin review -> simulate advances -> dashboard and transaction history
 ```
 
-It does not yet include dashboard summaries or standalone transaction listing.
+The core MVP backend slices from the spec are now implemented. Remaining work is mostly frontend integration, richer demos, and production hardening.
 
 ## How To Use Swagger Authorization
 
@@ -630,6 +631,81 @@ Trust score events are created by other flows, such as:
 - repayment completion
 - admin rejection
 
+### Get Dashboard Summary
+
+```http
+GET /api/dashboard/summary
+```
+
+Returns a current-user dashboard summary.
+
+The response includes:
+
+- account type and financing model
+- current trust score
+- ledger balance from recorded credit/debit transactions
+- outstanding invoice count and amount
+- active advance count and amount
+- expected repayment count and amount
+- review-state counters
+- five latest transactions
+
+Example response shape:
+
+```json
+{
+  "accountType": "SmallBusiness",
+  "financingModel": "InvoiceFactoring",
+  "trustScore": 60,
+  "ledgerBalance": 19600,
+  "outstandingInvoices": {
+    "count": 1,
+    "amount": 18000
+  },
+  "activeAdvances": {
+    "count": 1,
+    "amount": 16200
+  },
+  "expectedRepayments": {
+    "count": 1,
+    "amount": 18000
+  },
+  "reviewStates": {
+    "pendingClientConfirmation": 0,
+    "pendingReview": 1,
+    "approvedReadyForDisbursement": 0
+  },
+  "recentTransactions": []
+}
+```
+
+### List Transactions
+
+```http
+GET /api/transactions
+```
+
+Returns the authenticated user's ledger transactions, newest first.
+
+Optional query:
+
+```http
+GET /api/transactions?limit=50
+```
+
+`limit` is clamped between `1` and `500`.
+
+Each transaction includes:
+
+- transaction id
+- invoice id and invoice number, if linked
+- advance request id, if linked
+- type
+- direction
+- amount
+- description
+- created date
+
 ## Recommended Current Workflow
 
 ```text
@@ -652,6 +728,8 @@ Trust score events are created by other flows, such as:
 17. POST /api/admin/advance-requests/{id}/ai-review
 18. POST /api/admin/advance-requests/{id}/approve
 19. GET /api/trust-score/events
+20. GET /api/dashboard/summary
+21. GET /api/transactions
 ```
 
 ## Error Response Shape
@@ -690,21 +768,11 @@ Common error codes so far:
 | `REJECTION_REASON_REQUIRED` | Manual rejection was submitted without a reason. |
 | `INVALID_ADMIN_REVIEW_TRANSITION` | The manual review action is not valid for the current advance/invoice state. |
 
-## Recommended Order For Remaining Features
+## Recommended Next Work
 
-Build one vertical slice at a time.
+The core MVP backend API is covered. Next work should be:
 
-### 1. Dashboard And Transactions
-
-```http
-GET /api/dashboard/summary
-GET /api/transactions
-```
-
-Build last because dashboard data depends on invoices, advances, payments, transactions, and trust score.
-
-Add:
-
-- dashboard summary service
-- transaction history endpoint
-- summary cards for open invoices, active advances, recent transactions, and trust score
+- connect the frontend screens to these endpoints
+- add realistic file upload/storage for invoice documents
+- add endpoint-level smoke tests for the demo workflow
+- polish demo seed data for the exact presentation story

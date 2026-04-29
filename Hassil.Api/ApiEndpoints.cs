@@ -36,6 +36,22 @@ public static class ApiEndpoints
         public const string Events = $"{Base}/events";
     }
 
+    // -- Dashboard Endpoints -------------------------------------------------
+    public static class Dashboard
+    {
+        private const string Base = $"{ApiBase}/dashboard";
+
+        public const string Summary = $"{Base}/summary";
+    }
+
+    // -- Transaction Endpoints ----------------------------------------------
+    public static class Transactions
+    {
+        private const string Base = $"{ApiBase}/transactions";
+
+        public const string GetAll = Base;
+    }
+
     // -- Invoice Endpoints ----------------------------------------------------
     public static class Invoices
     {

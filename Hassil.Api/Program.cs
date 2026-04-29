@@ -5,11 +5,13 @@ using Hassil.Api.Services.Auth;
 using Hassil.Api.Services.AdvanceRequests;
 using Hassil.Api.Services.AdminReviews;
 using Hassil.Api.Services.ClientConfirmations;
+using Hassil.Api.Services.Dashboard;
 using Hassil.Api.Services.Demo;
 using Hassil.Api.Services.Invoices;
 using Hassil.Api.Services.Ledger;
 using Hassil.Api.Services.Notifications;
 using Hassil.Api.Services.OpenBanking;
+using Hassil.Api.Services.Transactions;
 using Hassil.Api.Services.TrustScores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -67,6 +69,8 @@ builder.Services.AddScoped<IClientConfirmationService, ClientConfirmationService
 builder.Services.AddScoped<IAiReviewService, AiReviewService>();
 builder.Services.AddScoped<IAdminReviewService, AdminReviewService>();
 builder.Services.AddScoped<ITrustScoreService, TrustScoreService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 var app = builder.Build();
 
