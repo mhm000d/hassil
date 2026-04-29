@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import Icon from './Icon'
 import Logo from './Logo'
 import { mockUsers, mockApi } from '../data/mockApi'
 
 interface AppLayoutProps {
-    children: ReactNode
+    children?: ReactNode
 }
 
 const currentUser = mockUsers[0]
@@ -37,21 +37,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
         { path: '/cash-flow', label: 'Cash Flow', icon: 'cashflow' as const },
         { path: '/ledger', label: 'Ledger', icon: 'ledger' as const },
         { path: '/admin', label: 'Admin', icon: 'admin' as const },
+        { path: '/client/confirm', label: 'Client Link', icon: 'link' as const },
     ]
 
-    const filteredNavItems = isAdminPath 
-        ? allNavItems.filter(item => item.path.startsWith('/admin'))
-        : allNavItems.filter(item => item.path !== '/admin')
+    const navItems = isAdminPath
+        ? allNavItems.filter((item) => item.path === '/admin')
+        : allNavItems.filter((item) => item.path !== '/admin')
 
     const pageTitle = pageTitleMap.find(([key]) => path.startsWith(key))?.[1] ?? 'Hassil'
 
     const goClientLink = () => {
         const token = mockApi.getPendingConfirmationToken()
-        if (token) {
-            navigate(`/client/confirm/${token}`)
-        } else {
-            navigate('/advances/adv-002') // fallback to the seeded factoring advance
-        }
+        navigate(token ? `/client/confirm/${token}` : '/advances/adv-002')
     }
 
     return (
@@ -88,18 +85,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </div>
                 </div>
                 <nav className="rail-nav">
-                    {filteredNavItems.map((item) => {
+                    {navItems.map((item) => {
                         const isActive =
                             path === item.path ||
                             (item.path !== '/dashboard' && path.startsWith(item.path))
+                        const onClick = item.path === '/client/confirm'
+                            ? goClientLink
+                            : () => navigate(item.path)
                         return (
                             <button
                                 key={item.path}
                                 className={isActive ? 'active' : ''}
-                                onClick={() => navigate(item.path)}
+                                onClick={onClick}
                             >
                                 <Icon name={item.icon} />
                                 {item.label}
+                                {item.path === '/client/confirm' && pendingToken && <span>1</span>}
                             </button>
                         )
                     })}
@@ -118,7 +119,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
             <main className="app-main">
                 <div className="page-content">
-                    {children}
+                    {children ?? <Outlet />}
                 </div>
             </main>
         </div>

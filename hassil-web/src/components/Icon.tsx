@@ -4,6 +4,7 @@ export type IconName =
     | 'plus'
     | 'open'
     | 'advance'
+    | 'back'
     | 'chart'
     | 'check'
     | 'next'
@@ -21,6 +22,7 @@ const iconPaths: Record<IconName, ReactNode> = {
     plus:      <><path d="M12 5v14" /><path d="M5 12h14" /></>,
     open:      <><path d="M7 17 17 7" /><path d="M9 7h8v8" /></>,
     advance:   <><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></>,
+    back:      <><path d="M19 12H5" /><path d="m11 6-6 6 6 6" /></>,
     chart:     <><path d="M4 19V5" /><path d="M4 19h16" /><path d="M8 15v-4" /><path d="M12 15V8" /><path d="M16 15v-6" /></>,
     check:     <><path d="m5 12 4 4L19 6" /></>,
     next:      <><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></>,
