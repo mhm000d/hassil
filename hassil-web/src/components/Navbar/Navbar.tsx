@@ -1,10 +1,14 @@
 import './Navbar.css'
+import Logo from '../Logo'
+import { useNavigate } from 'react-router-dom'
 
 export default function Navbar() {
+    const navigate = useNavigate()
+
     return (
         <nav className="navbar" id="navbar">
             <div className="container navbar__inner">
-                <a href="/" className="navbar__brand">Hassil</a>
+                <Logo onClick={() => navigate('/')} />
                 <div className="navbar__actions">
                     <button className="navbar__icon-btn" aria-label="Settings" id="btn-settings">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
