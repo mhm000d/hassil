@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import './FreelancerLogin.css' // We can reuse the styling from FreelancerLogin
+import { useAuth } from '../context/AuthContext'
+import './FreelancerLogin.css'
 
 export default function AdminLogin() {
     const navigate = useNavigate()
+    const { login } = useAuth()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        // Dummy login, just navigate to admin
+        login({ name: 'Hassil', email: email || 'admin@hassil.io', accountType: 'SmallBusiness' })
         navigate('/admin')
     }
 
