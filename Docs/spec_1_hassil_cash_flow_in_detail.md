@@ -1182,6 +1182,8 @@ Hassil.Api/
     Invoices/
       InvoiceRequests.cs
       InvoiceResponses.cs
+    TrustScores/
+      TrustScoreResponses.cs
     Users/
       UserResponses.cs
   Controllers/
@@ -1190,6 +1192,7 @@ Hassil.Api/
     AuthController.cs
     ClientConfirmationsController.cs
     InvoicesController.cs
+    TrustScoresController.cs
     DemoController.cs
     UsersController.cs
   Database/
@@ -1208,6 +1211,7 @@ Hassil.Api/
     ClientConfirmationMappings.cs
     DemoMappings.cs
     InvoiceMappings.cs
+    TrustScoreMappings.cs
     UserMappings.cs
   Middleware/
     ErrorHandlingMiddleware.cs
@@ -1251,6 +1255,10 @@ Hassil.Api/
     Notifications/
       IMockNotificationService.cs
       MockNotificationService.cs
+    TrustScores/
+      ITrustScoreService.cs
+      TrustScoreHistory.cs
+      TrustScoreService.cs
 ```
 
 Core services:
