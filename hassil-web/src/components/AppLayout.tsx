@@ -29,13 +29,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
     // Read synchronously from live in-memory state — always up to date
     const pendingToken = mockApi.getPendingConfirmationToken()
 
-    const navItems = [
+    const isAdminPath = path.startsWith('/admin')
+
+    const allNavItems = [
         { path: '/dashboard', label: 'Home', icon: 'home' as const },
         { path: '/invoices', label: 'Invoices', icon: 'invoice' as const },
         { path: '/cash-flow', label: 'Cash Flow', icon: 'cashflow' as const },
         { path: '/ledger', label: 'Ledger', icon: 'ledger' as const },
         { path: '/admin', label: 'Admin', icon: 'admin' as const },
     ]
+
+    const filteredNavItems = isAdminPath 
+        ? allNavItems.filter(item => item.path.startsWith('/admin'))
+        : allNavItems.filter(item => item.path !== '/admin')
 
     const pageTitle = pageTitleMap.find(([key]) => path.startsWith(key))?.[1] ?? 'Hassil'
 
@@ -64,9 +70,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         <button type="button" className="btn btn-ghost">
                             {currentUser.smallBusinessProfile?.businessName ?? currentUser.freelancerProfile?.fullName ?? currentUser.email}
                         </button>
-                        <button type="button" className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
-                            <Icon name="plus" /> Create Invoice
-                        </button>
+                        {!isAdminPath && (
+                            <button type="button" className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
+                                <Icon name="plus" /> Create Invoice
+                            </button>
+                        )}
                     </div>
                 </div>
             </header>
@@ -75,12 +83,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <div className="rail-profile">
                     <div className="rail-avatar"><Icon name="check" /></div>
                     <div>
-                        <strong>{currentUser.smallBusinessProfile?.businessName ?? currentUser.freelancerProfile?.fullName ?? currentUser.email}</strong>
-                        <span>Trust score {currentUser.trustScore}</span>
+                        <strong>{isAdminPath ? 'Admin Console' : (currentUser.smallBusinessProfile?.businessName ?? currentUser.freelancerProfile?.fullName ?? currentUser.email)}</strong>
+                        <span>{isAdminPath ? 'System Administrator' : `Trust score ${currentUser.trustScore}`}</span>
                     </div>
                 </div>
                 <nav className="rail-nav">
-                    {navItems.map((item) => {
+                    {filteredNavItems.map((item) => {
                         const isActive =
                             path === item.path ||
                             (item.path !== '/dashboard' && path.startsWith(item.path))
@@ -95,19 +103,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
                             </button>
                         )
                     })}
-                    <button
-                        className={path.startsWith('/client/confirm') ? 'active' : ''}
-                        onClick={goClientLink}
-                    >
-                        <Icon name="link" />
-                        Client Link
-                        {pendingToken && <span>1</span>}
-                    </button>
                 </nav>
                 <div className="rail-footer">
-                    <button className="rail-link" onClick={() => navigate('/ledger')}>
-                        <Icon name="ledger" /> Support trail
-                    </button>
+                    {!isAdminPath && (
+                        <button className="rail-link" onClick={() => navigate('/ledger')}>
+                            <Icon name="ledger" /> Support trail
+                        </button>
+                    )}
                     <button className="btn btn-secondary full-width" onClick={() => navigate('/')}>
                         <Icon name="open" /> Logout
                     </button>

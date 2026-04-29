@@ -1,6 +1,9 @@
+import { useNavigate } from 'react-router-dom'
 import './CtaSection.css'
 
 export default function CtaSection() {
+    const navigate = useNavigate()
+
     return (
         <section className="cta" id="cta">
             <div className="container">
@@ -10,7 +13,7 @@ export default function CtaSection() {
                         Join thousands of businesses and freelancers in the MENA region who get paid on their own terms.
                     </p>
                     <div className="cta__buttons">
-                        <button className="cta__btn-primary" id="btn-cta-start">Get Started Now</button>
+                        <button className="cta__btn-primary" id="btn-cta-start" onClick={() => navigate('/account-type')}>Get Started Now</button>
                         <button className="cta__btn-secondary" id="btn-cta-sales">Contact Sales</button>
                     </div>
                 </div>

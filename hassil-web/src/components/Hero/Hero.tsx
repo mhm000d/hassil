@@ -12,7 +12,7 @@ export default function Hero() {
                         THE WORK IS DONE. THE MONEY ISN'T THERE.
                     </div>
                     <h1 className="hero__title">
-                        Get Paid When the <span>Work Is Done.</span>
+                        Get Paid When the <span className="typewriter">Work Is Done.</span>
                     </h1>
                     <p className="hero__description">
                         Hassil turns confirmed work into usable cash in hours not weeks.
@@ -22,7 +22,7 @@ export default function Hero() {
                         <button
                             className="hero__btn-primary"
                             id="btn-get-started"
-                            onClick={() => navigate('/dashboard')}
+                            onClick={() => navigate('/account-type')}
                         >
                             Get Started
                         </button>
@@ -35,15 +35,8 @@ export default function Hero() {
                         </button>
                     </div>
                 </div>
-                <div className="hero__stats">
-                    <div className="hero__stat-card hero__stat-card--light">
-                        <div className="hero__stat-number">63%</div>
-                        <div className="hero__stat-label">of MENA MSMEs lack access to finance</div>
-                    </div>
-                    <div className="hero__stat-card hero__stat-card--dark">
-                        <div className="hero__stat-number">$210–240B</div>
-                        <div className="hero__stat-label">MSME financing gap in MENA</div>
-                    </div>
+                <div className="hero__image">
+                    <img src="/hero-image.png" alt="Financing for MENA businesses" />
                 </div>
             </div>
         </section>

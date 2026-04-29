@@ -11,6 +11,8 @@ import Ledger from './pages/Ledger'
 import CashFlow from './pages/CashFlow'
 import ClientConfirmation from './pages/ClientConfirmation'
 import LandingPage from './pages/LandingPage'
+import AccountType from './pages/AccountType'
+import AdminLogin from './pages/AdminLogin'
 import FreelancerLogin from './pages/FreelancerLogin'
 import FreelancerOnboarding from './pages/FreelancerOnboarding'
 import HomeFreelancer from './pages/HomeFreelancer'
@@ -46,6 +48,8 @@ function App() {
             <Routes>
                 {/* Public — no shell */}
                 <Route path="/" element={<LandingPage />} />
+                <Route path="/account-type" element={<AccountType />} />
+                <Route path="/login/admin" element={<AdminLogin />} />
                 <Route path="/login/freelancer" element={<FreelancerLogin />} />
                 <Route path="/onboarding/freelancer" element={<FreelancerOnboarding />} />
                 <Route path="/login/company" element={<CompanyLogin />} />

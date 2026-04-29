@@ -47,7 +47,9 @@ export default function BridgingSection() {
                             <div className="bridging__card-feature"><CheckIcon /><span>Instant liquidity for confirmed invoices</span></div>
                             <div className="bridging__card-feature"><CheckIcon /><span>Flat transaction fees</span></div>
                         </div>
-                        <Link to="/login/company" className="bridging__card-link">Learn More <ArrowIcon /></Link>
+                        <div className="bridging__card-visual">
+                            <img src="/smb-creative.png" alt="SMB Financing" />
+                        </div>
                     </div>
                     <div className="bridging__card bridging__card--freelancer">
                         <div className="bridging__card-icon"><FreelancerIcon /></div>
@@ -55,7 +57,9 @@ export default function BridgingSection() {
                         <p className="bridging__card-desc">
                             Work delivered? Money received. Bridging the gap between project completion and bank deposits.
                         </p>
-                        <Link to="/login/freelancer" className="bridging__card-link">Learn More <ArrowIcon /></Link>
+                        <div className="bridging__card-visual">
+                            <img src="/freelancer-creative.png" alt="Freelancer Financing" />
+                        </div>
                     </div>
                 </div>
             </div>
