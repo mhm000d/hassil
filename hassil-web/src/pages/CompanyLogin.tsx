@@ -1,18 +1,20 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import './FreelancerLogin.css'
 
 export default function CompanyLogin() {
-  const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+    const navigate = useNavigate()
+    const { login } = useAuth()
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    // No verification - navigate directly to onboarding
-    navigate('/onboarding/SmallBusiness')
-  }
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        login({ name: email.split('@')[0] || 'Business', email, accountType: 'SmallBusiness' })
+        navigate('/dashboard')
+    }
 
   return (
     <div className="login-page">
@@ -111,6 +113,9 @@ export default function CompanyLogin() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
             </svg>
             Back to Home
+          </a>
+          <a href="/onboarding/SmallBusiness" className="login-card__back-link">
+            New here? Create account
           </a>
         </div>
       </div>

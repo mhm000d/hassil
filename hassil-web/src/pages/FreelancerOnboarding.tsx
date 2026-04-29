@@ -6,9 +6,14 @@ import './FreelancerOnboarding.css'
 export default function FreelancerOnboarding() {
     const navigate = useNavigate()
     const { login } = useAuth()
+
+    const pending = (() => {
+        try { return JSON.parse(sessionStorage.getItem('hassil_pending_reg') ?? '{}') } catch { return {} }
+    })()
+
     const [form, setForm] = useState({
-        fullName: '',
-        email: '',
+        fullName: pending.name ?? '',
+        email: pending.email ?? '',
         phone: '',
         country: '',
         bankName: '',
@@ -21,7 +26,8 @@ export default function FreelancerOnboarding() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        login({ name: form.fullName || 'Freelancer', email: form.email, accountType: 'Freelancer' })
+        login({ name: form.fullName || pending.name || 'Freelancer', displayName: form.fullName || pending.name || 'Freelancer', email: form.email || pending.email, accountType: 'Freelancer' })
+        sessionStorage.removeItem('hassil_pending_reg')
         navigate('/dashboard')
     }
 

@@ -2,25 +2,27 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Invoice, AdvanceRequest, Transaction, User } from '../types'
 import { mockApi, mockUsers, formatCurrency, calculateQuote } from '../data/mockApi'
+import { useAuth } from '../context/AuthContext'
 import Icon from '../components/Icon'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
 import Table from '../components/Table'
 import TransactionTimeline from '../components/TransactionTimeline'
 
-const currentUser: User = mockUsers[0]
+const seedUser: User = mockUsers[0]
 
 export default function Dashboard() {
     const navigate = useNavigate()
+    const { user: authUser } = useAuth()
     const [invoices, setInvoices] = useState<Invoice[]>([])
     const [advances, setAdvances] = useState<AdvanceRequest[]>([])
     const [transactions, setTransactions] = useState<Transaction[]>([])
 
     useEffect(() => {
         Promise.all([
-            mockApi.listInvoices(currentUser.id),
-            mockApi.listAdvanceRequests(currentUser.id),
-            mockApi.listTransactions(currentUser.id),
+            mockApi.listInvoices(seedUser.id),
+            mockApi.listAdvanceRequests(seedUser.id),
+            mockApi.listTransactions(seedUser.id),
         ]).then(([invRes, advRes, txRes]) => {
             setInvoices(invRes.data)
             setAdvances(advRes.data)
@@ -28,13 +30,15 @@ export default function Dashboard() {
         })
     }, [])
 
-    const model = currentUser.accountType === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'
-    const displayName = currentUser.smallBusinessProfile?.businessName
-        ?? currentUser.freelancerProfile?.fullName
-        ?? currentUser.email
+    const model = (authUser?.accountType ?? seedUser.accountType) === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'
+    const displayName = authUser?.displayName
+        ?? authUser?.name
+        ?? seedUser.smallBusinessProfile?.businessName
+        ?? seedUser.freelancerProfile?.fullName
+        ?? seedUser.email
 
     const openInvoices = invoices.filter((inv) => inv.status !== 'Paid' && inv.status !== 'Rejected')
-    const availableNow = openInvoices.reduce((sum, inv) => sum + calculateQuote(currentUser, inv).advanceAmount, 0)
+    const availableNow = openInvoices.reduce((sum, inv) => sum + calculateQuote(seedUser, inv).advanceAmount, 0)
     const outstanding = openInvoices.reduce((sum, inv) => sum + inv.amount, 0)
 
     const activeAdvances = advances.filter((adv) => !['Repaid', 'Rejected'].includes(adv.status))

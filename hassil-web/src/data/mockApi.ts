@@ -609,6 +609,59 @@ export const mockApi = {
     },
 }
 
+// ─── Auth helpers (localStorage-backed) ──────────────────────────────────────
+
+const USERS_KEY = 'hassil_registered_users'
+
+interface RegisteredUser {
+    email: string
+    passwordHash: string // stored as plain text for demo purposes
+    name: string
+    displayName: string  // company name for SMB, same as name for Freelancer
+    accountType: 'Freelancer' | 'SmallBusiness'
+}
+
+function loadRegisteredUsers(): RegisteredUser[] {
+    try {
+        return JSON.parse(localStorage.getItem(USERS_KEY) ?? '[]')
+    } catch {
+        return []
+    }
+}
+
+function saveRegisteredUsers(users: RegisteredUser[]) {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users))
+}
+
+export const authApi = {
+    register(user: RegisteredUser): { success: boolean; error?: string } {
+        const users = loadRegisteredUsers()
+        if (users.find((u) => u.email.toLowerCase() === user.email.toLowerCase())) {
+            return { success: false, error: 'An account with this email already exists.' }
+        }
+        saveRegisteredUsers([...users, user])
+        return { success: true }
+    },
+
+    login(email: string, password: string): { success: boolean; user?: RegisteredUser; error?: string } {
+        const users = loadRegisteredUsers()
+        const found = users.find(
+            (u) => u.email.toLowerCase() === email.toLowerCase() && u.passwordHash === password,
+        )
+        if (!found) {
+            return { success: false, error: 'Invalid email or password.' }
+        }
+        return { success: true, user: found }
+    },
+
+    updateDisplayName(email: string, displayName: string): void {
+        const users = loadRegisteredUsers()
+        saveRegisteredUsers(users.map((u) =>
+            u.email.toLowerCase() === email.toLowerCase() ? { ...u, displayName } : u,
+        ))
+    },
+}
+
 // ─── Utility helpers (shared with pages) ─────────────────────────────────────
 
 export function generateId(prefix = 'id') {

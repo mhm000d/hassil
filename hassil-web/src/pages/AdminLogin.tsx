@@ -11,7 +11,7 @@ export default function AdminLogin() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        login({ name: 'Hassil', email: email || 'admin@hassil.io', accountType: 'SmallBusiness' })
+        login({ name: 'Hassil', displayName: 'Hassil', email: email || 'admin@hassil.io', accountType: 'SmallBusiness' })
         navigate('/admin')
     }
 
@@ -52,6 +52,11 @@ export default function AdminLogin() {
                         <button type="submit" className="btn btn-primary full-width">
                             Sign In
                         </button>
+                    </div>
+                    <div style={{ textAlign: 'center', marginTop: 16 }}>
+                        <a href="/" className="login-card__back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--gray)', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+                            ← Back to Home
+                        </a>
                     </div>
                 </form>
             </div>

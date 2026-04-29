@@ -250,7 +250,11 @@
 /* ── Footer ────────────────────────────────────── */
 .login-card__footer {
   margin-top: 24px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .login-card__back-link {
@@ -287,4 +291,10 @@
   .login-card__title {
     font-size: 1.4rem;
   }
+}
+
+.login-card__footer-sep {
+  color: var(--color-gray-400, #9ca3af);
+  font-size: 14px;
+  user-select: none;
 }

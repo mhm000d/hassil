@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 
 interface AuthUser {
-    name: string
+    name: string          // contact person name (used for login)
+    displayName: string   // company name for SMB, freelancer name for Freelancer
     email: string
     accountType: 'Freelancer' | 'SmallBusiness'
 }

@@ -29,7 +29,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const { user: authUser, logout } = useAuth()
 
     // Use logged-in user name if available, fall back to mock seed user
-    const displayName = authUser?.name
+    const displayName = authUser?.displayName
+        ?? authUser?.name
         ?? mockUsers[0].smallBusinessProfile?.businessName
         ?? mockUsers[0].freelancerProfile?.fullName
         ?? mockUsers[0].email
@@ -45,7 +46,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
         { path: '/cash-flow', label: 'Cash Flow', icon: 'cashflow' as const },
         { path: '/ledger', label: 'Ledger', icon: 'ledger' as const },
         { path: '/admin', label: 'Admin', icon: 'admin' as const },
-        { path: '/client/confirm', label: 'Client Link', icon: 'link' as const },
+        ...(authUser?.accountType === 'SmallBusiness'
+            ? [{ path: '/client/confirm', label: 'Client Link', icon: 'link' as const }]
+            : []),
     ]
 
     const navItems = isAdminPath
