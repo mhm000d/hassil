@@ -1165,6 +1165,9 @@ Hassil.Api/
     DemoBearerAuthenticationDefaults.cs
     DemoBearerAuthenticationHandler.cs
   Contracts/
+    AdminReviews/
+      AdminReviewRequests.cs
+      AdminReviewResponses.cs
     AdvanceRequests/
       AdvanceRequestRequests.cs
       AdvanceRequestResponses.cs
@@ -1183,6 +1186,7 @@ Hassil.Api/
       UserResponses.cs
   Controllers/
     AdvanceRequestsController.cs
+    AdminReviewsController.cs
     AuthController.cs
     ClientConfirmationsController.cs
     InvoicesController.cs
@@ -1199,6 +1203,7 @@ Hassil.Api/
     AppException.cs
   Mappings/
     AdvanceRequestMappings.cs
+    AdminReviewMappings.cs
     AuthMappings.cs
     ClientConfirmationMappings.cs
     DemoMappings.cs
@@ -1207,6 +1212,12 @@ Hassil.Api/
   Middleware/
     ErrorHandlingMiddleware.cs
   Services/
+    AdminReviews/
+      AdminReviewDetail.cs
+      AdminReviewService.cs
+      AiReviewService.cs
+      IAdminReviewService.cs
+      IAiReviewService.cs
     AdvanceRequests/
       AdvanceCalculatorService.cs
       AdvanceQuote.cs

@@ -65,4 +65,17 @@ public static class ApiEndpoints
         public const string Confirm = $"{Base}/{{token}}/confirm";
         public const string Dispute = $"{Base}/{{token}}/dispute";
     }
+
+    // -- Admin Review Endpoints ---------------------------------------------
+    public static class Admin
+    {
+        private const string AdvanceBase = $"{ApiBase}/admin/advance-requests";
+
+        public const string GetPendingAdvanceRequests = $"{AdvanceBase}/pending";
+        public const string GetAdvanceRequest = $"{AdvanceBase}/{{id:guid}}";
+        public const string ApproveAdvanceRequest = $"{AdvanceBase}/{{id:guid}}/approve";
+        public const string RejectAdvanceRequest = $"{AdvanceBase}/{{id:guid}}/reject";
+        public const string RequestMoreInfo = $"{AdvanceBase}/{{id:guid}}/request-more-info";
+        public const string GenerateAiReview = $"{AdvanceBase}/{{id:guid}}/ai-review";
+    }
 }

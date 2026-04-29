@@ -27,22 +27,27 @@ This document explains what the backend currently supports, how the existing end
   - [Get Client Confirmation](#get-client-confirmation)
   - [Confirm Client Confirmation](#confirm-client-confirmation)
   - [Dispute Client Confirmation](#dispute-client-confirmation)
+  - [List Pending Admin Reviews](#list-pending-admin-reviews)
+  - [Get Admin Review Detail](#get-admin-review-detail)
+  - [Approve Advance Request Manually](#approve-advance-request-manually)
+  - [Reject Advance Request Manually](#reject-advance-request-manually)
+  - [Request More Information](#request-more-information)
+  - [Generate AI Review Summary](#generate-ai-review-summary)
 - [Recommended Current Workflow](#recommended-current-workflow)
 - [Error Response Shape](#error-response-shape)
 - [Recommended Order For Remaining Features](#recommended-order-for-remaining-features)
-  - [1. Admin Review](#1-admin-review)
-  - [2. Trust Score Events](#2-trust-score-events)
-  - [3. Dashboard And Transactions](#3-dashboard-and-transactions)
+  - [1. Trust Score Events](#1-trust-score-events)
+  - [2. Dashboard And Transactions](#2-dashboard-and-transactions)
 
 ## Current Backend Scope
 
 The backend currently covers the first working slice of the demo:
 
 ```text
-seed demo data -> demo login -> authorize requests -> create/list/submit invoices -> quote/create advances -> confirm factoring clients -> simulate advances
+seed demo data -> demo login -> authorize requests -> create/list/submit invoices -> quote/create advances -> confirm factoring clients -> admin review -> simulate advances
 ```
 
-It does not yet include admin review endpoints, trust-score event listing, dashboard summaries, or standalone transaction listing.
+It does not yet include trust-score event listing, dashboard summaries, or standalone transaction listing.
 
 ## How To Use Swagger Authorization
 
@@ -480,6 +485,115 @@ What it does:
 - Rejects the linked advance request.
 - Reduces trust score for the dispute.
 
+### List Pending Admin Reviews
+
+```http
+GET /api/admin/advance-requests/pending
+```
+
+Admin-only endpoint.
+
+Returns advance requests in `PendingReview`.
+
+Use the `admin` persona token in Swagger for this endpoint.
+
+### Get Admin Review Detail
+
+```http
+GET /api/admin/advance-requests/{id}
+```
+
+Admin-only endpoint.
+
+Returns:
+
+- the full advance request response
+- verification checklist
+- latest AI review snapshot, if one exists
+- admin review history
+
+The checklist covers the simple MVP checks from the spec: active user, accepted terms, attached evidence, due-date window, trust-based limit, trust score, and client confirmation when factoring is used.
+
+### Approve Advance Request Manually
+
+```http
+POST /api/admin/advance-requests/{id}/approve
+```
+
+Admin-only endpoint.
+
+Example request:
+
+```json
+{
+  "notes": "Evidence checked and approved."
+}
+```
+
+Moves the advance from:
+
+```text
+PendingReview -> Approved
+```
+
+Also marks the linked invoice as `Approved` and writes an `AdminReview` record.
+
+### Reject Advance Request Manually
+
+```http
+POST /api/admin/advance-requests/{id}/reject
+```
+
+Admin-only endpoint.
+
+Example request:
+
+```json
+{
+  "reason": "Supporting evidence does not match the invoice."
+}
+```
+
+Moves the advance to `Rejected`, marks the linked invoice as `Rejected`, writes an `AdminReview` record, and reduces trust score.
+
+### Request More Information
+
+```http
+POST /api/admin/advance-requests/{id}/request-more-info
+```
+
+Admin-only endpoint.
+
+Example request:
+
+```json
+{
+  "notes": "Please attach the signed purchase order."
+}
+```
+
+Writes an `AdminReview` record with decision `RequestMoreInfo`.
+
+The request remains in `PendingReview`; this keeps the demo flow simple until a real evidence request workflow exists.
+
+### Generate AI Review Summary
+
+```http
+POST /api/admin/advance-requests/{id}/ai-review
+```
+
+Admin-only endpoint.
+
+Creates a new `AiReviewSnapshot` using the rule-backed MVP assistant.
+
+The assistant does not make the final decision. It summarizes the request risk and recommends one of:
+
+```text
+Approve
+ManualReview
+Reject
+```
+
 ## Recommended Current Workflow
 
 ```text
@@ -496,6 +610,11 @@ What it does:
 11. For factoring: POST /api/client-confirmations/{token}/confirm
 12. GET /api/advance-requests
 13. GET /api/advance-requests/{id}
+14. For manual review: log in as `admin`
+15. GET /api/admin/advance-requests/pending
+16. GET /api/admin/advance-requests/{id}
+17. POST /api/admin/advance-requests/{id}/ai-review
+18. POST /api/admin/advance-requests/{id}/approve
 ```
 
 ## Error Response Shape
@@ -529,32 +648,16 @@ Common error codes so far:
 | `INVALID_FINANCING_MODEL` | A simulation was called for the wrong financing model. |
 | `CLIENT_CONFIRMATION_NOT_FOUND` | The client confirmation token was not found. |
 | `INVALID_CLIENT_CONFIRMATION_TRANSITION` | The confirmation cannot move to the requested state. |
+| `REVIEWER_NOT_FOUND` | The admin reviewer user from the token was not found. |
+| `ADMIN_ROLE_REQUIRED` | The current user is not an admin reviewer. |
+| `REJECTION_REASON_REQUIRED` | Manual rejection was submitted without a reason. |
+| `INVALID_ADMIN_REVIEW_TRANSITION` | The manual review action is not valid for the current advance/invoice state. |
 
 ## Recommended Order For Remaining Features
 
 Build one vertical slice at a time.
 
-### 1. Admin Review
-
-```http
-GET  /api/admin/advance-requests/pending
-GET  /api/admin/advance-requests/{id}
-POST /api/admin/advance-requests/{id}/approve
-POST /api/admin/advance-requests/{id}/reject
-POST /api/admin/advance-requests/{id}/request-more-info
-POST /api/admin/advance-requests/{id}/ai-review
-```
-
-Build this after scoring creates pending review records.
-
-Add:
-
-- admin-only authorization checks
-- `AiReviewService`
-- `AdminReview` records
-- manual approve/reject flow
-
-### 2. Trust Score Events
+### 1. Trust Score Events
 
 ```http
 GET /api/trust-score/events
@@ -567,7 +670,7 @@ Add:
 - `TrustScoreService`
 - trust-score history endpoint
 
-### 3. Dashboard And Transactions
+### 2. Dashboard And Transactions
 
 ```http
 GET /api/dashboard/summary
