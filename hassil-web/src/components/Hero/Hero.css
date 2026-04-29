@@ -40,8 +40,26 @@
   letter-spacing: -1px;
 }
 
-.hero__title span {
-  color: var(--color-gray-900);
+.hero__title span.typewriter {
+  color: var(--color-primary);
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  border-right: 3px solid var(--color-primary);
+  white-space: nowrap;
+  animation: typing 6s steps(20, end) infinite, blink-caret 0.8s step-end infinite;
+}
+
+@keyframes typing {
+  0% { width: 0 }
+  40% { width: 100% }  /* Writes slowly until 40% (2.4s) */
+  90% { width: 100% }  /* Stays written until 90% (5.4s) */
+  100% { width: 0 }    /* Erases quickly to restart */
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent }
+  50% { border-color: var(--color-primary) }
 }
 
 .hero__description {
@@ -90,67 +108,30 @@
   background: var(--color-gray-50);
 }
 
-/* ── Right Column - Stats ─────── */
-.hero__stats {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  justify-self: end;
+/* ── Right Column - Image ─────── */
+.hero__image {
+  position: relative;
   width: 100%;
-  max-width: 380px;
+  max-width: 540px;
+  justify-self: end;
+  animation: fadeInUp 0.8s ease forwards;
 }
 
-.hero__stat-card {
-  border-radius: var(--radius-lg);
-  padding: 28px 32px;
-  animation: fadeInUp 0.6s ease forwards;
-  opacity: 0;
+.hero__image img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-xl, 24px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  display: block;
 }
 
-.hero__stat-card:nth-child(1) {
-  animation-delay: 0.1s;
-}
-
-.hero__stat-card:nth-child(2) {
-  animation-delay: 0.3s;
-}
-
-.hero__stat-card--light {
-  background: var(--color-stat-bg);
-  border: 1px solid rgba(27, 94, 59, 0.1);
-}
-
-.hero__stat-card--dark {
-  background: var(--color-stat-dark);
-  color: var(--color-white);
-}
-
-.hero__stat-number {
-  font-size: 2.5rem;
-  font-weight: 800;
-  line-height: 1;
-  margin-bottom: 6px;
-}
-
-.hero__stat-card--light .hero__stat-number {
-  color: var(--color-primary);
-}
-
-.hero__stat-card--dark .hero__stat-number {
-  color: var(--color-white);
-}
-
-.hero__stat-label {
-  font-size: 0.85rem;
-  opacity: 0.8;
-}
-
-.hero__stat-card--light .hero__stat-label {
-  color: var(--color-gray-600);
-}
-
-.hero__stat-card--dark .hero__stat-label {
-  color: rgba(255, 255, 255, 0.75);
+.hero__image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-xl, 24px);
+  background: linear-gradient(135deg, rgba(27, 94, 59, 0.1), transparent);
+  pointer-events: none;
 }
 
 @keyframes fadeInUp {
@@ -174,8 +155,8 @@
     font-size: 2rem;
   }
 
-  .hero__stats {
-    justify-self: stretch;
+  .hero__image {
+    justify-self: center;
     max-width: 100%;
   }
 }

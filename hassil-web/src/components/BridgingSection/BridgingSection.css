@@ -104,25 +104,47 @@
   flex-shrink: 0;
 }
 
-.bridging__card-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-white);
-  margin-top: auto;
-  padding-top: 8px;
-  transition: gap var(--transition-fast);
+.bridging__card-visual {
+  position: absolute;
+  bottom: -20px;
+  right: -20px;
+  width: 140px;
+  height: 140px;
+  opacity: 0.8;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
 }
 
-.bridging__card-link:hover {
-  gap: 10px;
+.bridging__card-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: float 4s ease-in-out infinite;
 }
 
-.bridging__card-link svg {
-  width: 16px;
-  height: 16px;
+.bridging__card:hover .bridging__card-visual {
+  opacity: 1;
+  transform: scale(1.1) translate(-10px, -10px);
+  filter: drop-shadow(0 15px 30px rgba(0,0,0,0.3));
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+/* Optional: card glow on hover */
+.bridging__card--smb:hover {
+  box-shadow: 0 20px 40px rgba(5, 150, 105, 0.4);
+}
+
+.bridging__card--freelancer:hover {
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.4);
 }
 
 @media (max-width: 768px) {

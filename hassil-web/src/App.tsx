@@ -10,37 +10,44 @@ import AdminReview from './pages/AdminReview'
 import Ledger from './pages/Ledger'
 import CashFlow from './pages/CashFlow'
 import ClientConfirmation from './pages/ClientConfirmation'
-import Landing from './pages/Landing'
-
-function AppShell() {
-    return (
-        <AppLayout>
-            <Routes>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/invoices" element={<Invoices />} />
-                <Route path="/invoices/new" element={<NewInvoice />} />
-                <Route path="/invoices/:id" element={<InvoiceDetail />} />
-                <Route path="/invoices/:id/advance" element={<InvoiceAdvance />} />
-                <Route path="/advances/:id" element={<AdvanceDetail />} />
-                <Route path="/admin" element={<AdminReview />} />
-                <Route path="/admin/:advanceId" element={<AdminReview />} />
-                <Route path="/ledger" element={<Ledger />} />
-                <Route path="/cash-flow" element={<CashFlow />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-        </AppLayout>
-    )
-}
+import LandingPage from './pages/LandingPage'
+import AccountType from './pages/AccountType'
+import AdminLogin from './pages/AdminLogin'
+import FreelancerLogin from './pages/FreelancerLogin'
+import FreelancerOnboarding from './pages/FreelancerOnboarding'
+import CompanyLogin from './pages/CompanyLogin'
+import SmallBusinessOnboarding from './pages/SmallBusinessOnboarding'
 
 function App() {
     return (
         <BrowserRouter>
             <Routes>
                 {/* Public — no shell */}
-                <Route path="/" element={<Landing />} />
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/account-type" element={<AccountType />} />
+                <Route path="/login/admin" element={<AdminLogin />} />
+                <Route path="/login/freelancer" element={<FreelancerLogin />} />
+                <Route path="/onboarding/freelancer" element={<FreelancerOnboarding />} />
+                <Route path="/login/company" element={<CompanyLogin />} />
+                <Route path="/onboarding/SmallBusiness" element={<SmallBusinessOnboarding />} />
                 <Route path="/client/confirm/:token" element={<ClientConfirmation />} />
-                {/* App shell */}
-                <Route path="/*" element={<AppShell />} />
+                <Route path="/home/freelancer" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/home/company" element={<Navigate to="/dashboard" replace />} />
+
+                {/* App shell — all authenticated routes */}
+                <Route element={<AppLayout />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/invoices" element={<Invoices />} />
+                    <Route path="/invoices/new" element={<NewInvoice />} />
+                    <Route path="/invoices/:id" element={<InvoiceDetail />} />
+                    <Route path="/invoices/:id/advance" element={<InvoiceAdvance />} />
+                    <Route path="/advances/:id" element={<AdvanceDetail />} />
+                    <Route path="/admin" element={<AdminReview />} />
+                    <Route path="/admin/:advanceId" element={<AdminReview />} />
+                    <Route path="/ledger" element={<Ledger />} />
+                    <Route path="/cash-flow" element={<CashFlow />} />
+                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </Route>
             </Routes>
         </BrowserRouter>
     )

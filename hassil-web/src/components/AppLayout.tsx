@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import Icon from './Icon'
 import Logo from './Logo'
 import { mockUsers, mockApi } from '../data/mockApi'
+import { useAuth } from '../context/AuthContext'
 
 interface AppLayoutProps {
-    children: ReactNode
+    children?: ReactNode
 }
 
 const currentUser = mockUsers[0]
@@ -25,27 +26,37 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const navigate = useNavigate()
     const location = useLocation()
     const path = location.pathname
+    const { user: authUser } = useAuth()
+
+    // Use logged-in user name if available, fall back to mock seed user
+    const displayName = authUser?.name
+        ?? mockUsers[0].smallBusinessProfile?.businessName
+        ?? mockUsers[0].freelancerProfile?.fullName
+        ?? mockUsers[0].email
 
     // Read synchronously from live in-memory state — always up to date
     const pendingToken = mockApi.getPendingConfirmationToken()
 
-    const navItems = [
+    const isAdminPath = path.startsWith('/admin')
+
+    const allNavItems = [
         { path: '/dashboard', label: 'Home', icon: 'home' as const },
         { path: '/invoices', label: 'Invoices', icon: 'invoice' as const },
         { path: '/cash-flow', label: 'Cash Flow', icon: 'cashflow' as const },
         { path: '/ledger', label: 'Ledger', icon: 'ledger' as const },
         { path: '/admin', label: 'Admin', icon: 'admin' as const },
+        { path: '/client/confirm', label: 'Client Link', icon: 'link' as const },
     ]
+
+    const navItems = isAdminPath
+        ? allNavItems.filter((item) => item.path === '/admin')
+        : allNavItems.filter((item) => item.path !== '/admin')
 
     const pageTitle = pageTitleMap.find(([key]) => path.startsWith(key))?.[1] ?? 'Hassil'
 
     const goClientLink = () => {
         const token = mockApi.getPendingConfirmationToken()
-        if (token) {
-            navigate(`/client/confirm/${token}`)
-        } else {
-            navigate('/advances/adv-002') // fallback to the seeded factoring advance
-        }
+        navigate(token ? `/client/confirm/${token}` : '/advances/adv-002')
     }
 
     return (
@@ -62,11 +73,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </div>
                     <div className="top-actions header-actions">
                         <button type="button" className="btn btn-ghost">
-                            {currentUser.smallBusinessProfile?.businessName ?? currentUser.freelancerProfile?.fullName ?? currentUser.email}
+                            {displayName}
                         </button>
-                        <button type="button" className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
-                            <Icon name="plus" /> Create Invoice
-                        </button>
+                        {!isAdminPath && (
+                            <button type="button" className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
+                                <Icon name="plus" /> Create Invoice
+                            </button>
+                        )}
                     </div>
                 </div>
             </header>
@@ -75,8 +88,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <div className="rail-profile">
                     <div className="rail-avatar"><Icon name="check" /></div>
                     <div>
-                        <strong>{currentUser.smallBusinessProfile?.businessName ?? currentUser.freelancerProfile?.fullName ?? currentUser.email}</strong>
-                        <span>Trust score {currentUser.trustScore}</span>
+                        <strong>{isAdminPath ? 'Admin Console' : (currentUser.smallBusinessProfile?.businessName ?? currentUser.freelancerProfile?.fullName ?? currentUser.email)}</strong>
+                        <span>{isAdminPath ? 'System Administrator' : `Trust score ${currentUser.trustScore}`}</span>
                     </div>
                 </div>
                 <nav className="rail-nav">
@@ -84,30 +97,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         const isActive =
                             path === item.path ||
                             (item.path !== '/dashboard' && path.startsWith(item.path))
+                        const onClick = item.path === '/client/confirm'
+                            ? goClientLink
+                            : () => navigate(item.path)
                         return (
                             <button
                                 key={item.path}
                                 className={isActive ? 'active' : ''}
-                                onClick={() => navigate(item.path)}
+                                onClick={onClick}
                             >
                                 <Icon name={item.icon} />
                                 {item.label}
+                                {item.path === '/client/confirm' && pendingToken && <span>1</span>}
                             </button>
                         )
                     })}
-                    <button
-                        className={path.startsWith('/client/confirm') ? 'active' : ''}
-                        onClick={goClientLink}
-                    >
-                        <Icon name="link" />
-                        Client Link
-                        {pendingToken && <span>1</span>}
-                    </button>
                 </nav>
                 <div className="rail-footer">
-                    <button className="rail-link" onClick={() => navigate('/ledger')}>
-                        <Icon name="ledger" /> Support trail
-                    </button>
+                    {!isAdminPath && (
+                        <button className="rail-link" onClick={() => navigate('/ledger')}>
+                            <Icon name="ledger" /> Support trail
+                        </button>
+                    )}
                     <button className="btn btn-secondary full-width" onClick={() => navigate('/')}>
                         <Icon name="open" /> Logout
                     </button>
@@ -116,7 +127,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
             <main className="app-main">
                 <div className="page-content">
-                    {children}
+                    {children ?? <Outlet />}
                 </div>
             </main>
         </div>
