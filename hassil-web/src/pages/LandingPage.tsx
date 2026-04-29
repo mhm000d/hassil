@@ -6,16 +6,16 @@ import CtaSection from '../components/CtaSection/CtaSection'
 import Footer from '../components/Footer/Footer'
 
 export default function LandingPage() {
-  return (
-    <>
-      <Navbar />
-      <main>
-        <Hero />
-        <BridgingSection />
-        <WhyHassil />
-        <CtaSection />
-      </main>
-      <Footer />
-    </>
-  )
+    return (
+        <>
+            <Navbar />
+            <main>
+                <Hero />
+                <BridgingSection />
+                <WhyHassil />
+                <CtaSection />
+            </main>
+            <Footer />
+        </>
+    )
 }
