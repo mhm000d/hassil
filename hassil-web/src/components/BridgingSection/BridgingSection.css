@@ -1,0 +1,132 @@
+.bridging {
+  padding: var(--section-padding);
+  background: var(--color-gray-50);
+}
+
+.bridging__header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.bridging__title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-gray-900);
+  margin-bottom: 12px;
+}
+
+.bridging__subtitle {
+  font-size: 1rem;
+  color: var(--color-gray-500);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.bridging__cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* ── Card Base ────────────────── */
+.bridging__card {
+  border-radius: var(--radius-xl);
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.bridging__card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.bridging__card--smb {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.bridging__card--freelancer {
+  background: var(--color-stat-dark);
+  color: var(--color-white);
+}
+
+.bridging__card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.bridging__card-icon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--color-white);
+}
+
+.bridging__card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+.bridging__card-desc {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  opacity: 0.85;
+}
+
+.bridging__card-features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.bridging__card-feature {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  opacity: 0.9;
+}
+
+.bridging__card-feature svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.bridging__card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-white);
+  margin-top: auto;
+  padding-top: 8px;
+  transition: gap var(--transition-fast);
+}
+
+.bridging__card-link:hover {
+  gap: 10px;
+}
+
+.bridging__card-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 768px) {
+  .bridging__cards {
+    grid-template-columns: 1fr;
+  }
+}
