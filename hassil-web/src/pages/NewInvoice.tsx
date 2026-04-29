@@ -8,8 +8,7 @@ import {
     daysUntilDate,
     calculateQuote,
 } from '../data/mockApi'
-import { useAuth } from '../hooks'
-import { InvoiceService } from '../services/invoiceService'
+import { useAuth, useInvoices } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Icon from '../components/Icon'
@@ -22,6 +21,7 @@ export default function NewInvoice() {
     const navigate = useNavigate()
     const { user: currentUser } = useAuth()
     const actualUser = currentUser || mockUsers[0]
+    const { create: createInvoice, addDocument, submit: submitInvoice } = useInvoices()
     
     const [form, setForm] = useState({
         clientName: 'Noura Retail Group',
@@ -73,10 +73,18 @@ export default function NewInvoice() {
             dueDate: form.dueDate,
             description: form.description,
             paymentTerms: form.paymentTerms,
-            status: 'Submitted',
+            status: 'Draft',
             fingerprint,
+            documents: [],
         }
-        await InvoiceService.create(invoice as Invoice)
+        
+        await createInvoice(invoice as Invoice)
+        
+        if (form.hasEvidence) {
+            await addDocument(invoiceId, { fileName: 'invoice.pdf', documentType: 'InvoiceEvidence' })
+        }
+        
+        await submitInvoice(invoiceId)
         navigate(`/invoices/${invoiceId}`)
     }
 

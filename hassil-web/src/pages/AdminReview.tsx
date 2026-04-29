@@ -120,7 +120,7 @@ export default function AdminReview() {
                                     ['Repayment party', selected.repaymentParty],
                                     ['Client notification', selected.clientNotificationRequired ? 'Required' : 'Not required'],
                                     ['Client confirmation', invoice.clientConfirmation?.status ?? 'Not required'],
-                                    ['Supporting documents', `${invoice.documents.length}`],
+                                    ['Supporting documents', `${invoice.documents?.length ?? 0}`],
                                 ]}
                             />
                         </DisclosurePanel>

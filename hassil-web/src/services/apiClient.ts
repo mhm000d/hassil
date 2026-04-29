@@ -104,6 +104,51 @@ async function apiClient<T>(endpoint: string, { authRequired = true, method = 'G
             return res.data as T
         }
 
+        // --- Granular Simulations ---
+        if (endpoint.endsWith('/simulate-disbursement') && method === 'POST') {
+            const id = endpoint.split('/')[2]
+            const res = await mockApi.simulateDisbursement(id)
+            return res.data as T
+        }
+        if (endpoint.endsWith('/simulate-client-payment-detected') && method === 'POST') {
+            const id = endpoint.split('/')[2]
+            const res = await mockApi.simulateClientPaymentDetected(id)
+            return res.data as T
+        }
+        if (endpoint.endsWith('/simulate-user-repayment') && method === 'POST') {
+            const id = endpoint.split('/')[2]
+            const res = await mockApi.simulateUserRepayment(id)
+            return res.data as T
+        }
+        if (endpoint.endsWith('/simulate-client-payment-to-hassil') && method === 'POST') {
+            const id = endpoint.split('/')[2]
+            const res = await mockApi.simulateClientPaidHassil(id)
+            return res.data as T
+        }
+        if (endpoint.endsWith('/simulate-buffer-release') && method === 'POST') {
+            const id = endpoint.split('/')[2]
+            const res = await mockApi.simulateBufferRelease(id)
+            return res.data as T
+        }
+
+        // --- Quotes & Actions ---
+        if (endpoint === '/advances/quote' && method === 'POST') {
+            const payload = JSON.parse(body)
+            const res = await mockApi.getQuote(userId!, payload.invoiceId)
+            return res.data as T
+        }
+        if (endpoint.endsWith('/submit') && method === 'POST') {
+            const id = endpoint.split('/')[2]
+            const res = await mockApi.submitInvoice(id)
+            return res.data as T
+        }
+        if (endpoint.endsWith('/documents') && method === 'POST') {
+            const id = endpoint.split('/')[2]
+            const payload = JSON.parse(body)
+            const res = await mockApi.addInvoiceDocument(id, payload)
+            return res.data as T
+        }
+
         // --- Transactions ---
         if (endpoint === '/transactions' && method === 'GET') {
             const res = await mockApi.listTransactions(userId)
@@ -133,6 +178,11 @@ async function apiClient<T>(endpoint: string, { authRequired = true, method = 'G
         if (endpoint === '/admin-reviews' && method === 'POST') {
             const payload = JSON.parse(body)
             const res = await mockApi.addAdminReview({ ...payload, id: generateId('rev'), createdAt: new Date().toISOString() })
+            return res.data as T
+        }
+        if (endpoint.endsWith('/ai-review') && method === 'POST') {
+            const id = endpoint.split('/')[3] // /admin/advance-requests/{id}/ai-review
+            const res = await mockApi.getAiSnapshot(id)
             return res.data as T
         }
         if (endpoint === '/ai-snapshots' && method === 'GET') {

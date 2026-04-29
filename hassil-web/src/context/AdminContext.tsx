@@ -14,6 +14,7 @@ interface AdminContextValue {
     updateAdvance: (id: string, patch: Partial<AdvanceRequest>) => Promise<AdvanceRequest | undefined>
     updateInvoice: (id: string, patch: Partial<Invoice>) => Promise<Invoice | undefined>
     addReview: (review: Omit<AdminReview, 'id' | 'createdAt'>) => Promise<AdminReview>
+    generateAiReview: (advanceId: string) => Promise<AiReviewSnapshot>
 }
 
 export const AdminContext = createContext<AdminContextValue | null>(null)
@@ -66,6 +67,12 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         return res
     }
 
+    const generateAiReview = async (advanceId: string) => {
+        const res = await AdminService.generateAiReview(advanceId)
+        await fetchAll()
+        return res
+    }
+
     return (
         <AdminContext.Provider value={{ 
             advances, 
@@ -77,7 +84,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             getAiSnapshot,
             updateAdvance,
             updateInvoice,
-            addReview
+            addReview,
+            generateAiReview
         }}>
             {children}
         </AdminContext.Provider>

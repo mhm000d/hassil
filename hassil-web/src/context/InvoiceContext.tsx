@@ -10,6 +10,8 @@ interface InvoiceContextValue {
     get: (id: string) => Promise<Invoice | undefined>
     create: (invoice: Invoice) => Promise<Invoice>
     update: (id: string, patch: Partial<Invoice>) => Promise<Invoice | undefined>
+    submit: (id: string) => Promise<Invoice | undefined>
+    addDocument: (id: string, doc: { fileName: string; documentType: string }) => Promise<Invoice | undefined>
 }
 
 export const InvoiceContext = createContext<InvoiceContextValue>({
@@ -20,6 +22,8 @@ export const InvoiceContext = createContext<InvoiceContextValue>({
     get: async () => undefined,
     create: async (i) => i,
     update: async () => undefined,
+    submit: async () => undefined,
+    addDocument: async () => undefined,
 })
 
 export function InvoiceProvider({ children }: { children: ReactNode }) {
@@ -60,8 +64,20 @@ export function InvoiceProvider({ children }: { children: ReactNode }) {
         return res
     }
 
+    const submit = async (id: string) => {
+        const res = await InvoiceService.submit(id)
+        await fetchInvoices()
+        return res
+    }
+
+    const addDocument = async (id: string, doc: { fileName: string; documentType: string }) => {
+        const res = await InvoiceService.addDocument(id, doc)
+        await fetchInvoices()
+        return res
+    }
+
     return (
-        <InvoiceContext.Provider value={{ invoices, loading, error, refetch: fetchInvoices, get, create, update }}>
+        <InvoiceContext.Provider value={{ invoices, loading, error, refetch: fetchInvoices, get, create, update, submit, addDocument }}>
             {children}
         </InvoiceContext.Provider>
     )

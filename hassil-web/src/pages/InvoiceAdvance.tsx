@@ -4,7 +4,6 @@ import type { AdvanceRequest, Invoice } from '../types'
 import {
     generateId,
     formatCurrency,
-    calculateQuote,
     scoreAdvance,
     getReviewFlags,
 } from '../data/mockApi'
@@ -29,29 +28,42 @@ export default function InvoiceAdvance() {
     const navigate = useNavigate()
     const { user: currentUser } = useAuth()
     const { get: getInvoice, update: updateInvoice } = useInvoices()
-    const { create: createAdvance } = useAdvances()
+    const { create: createAdvance, getQuote } = useAdvances()
 
     const [invoice, setInvoice] = useState<Invoice | null>(null)
+    const [quote, setQuote] = useState<any>(null)
     const [accepted, setAccepted] = useState(false)
     const [submitting, setSubmitting] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        if (id) getInvoice(id).then((res) => setInvoice(res ?? null))
-    }, [id, getInvoice])
+        if (id) {
+            getInvoice(id).then((res) => {
+                setInvoice(res ?? null)
+                if (res) {
+                    getQuote(res.id)
+                        .then(q => setQuote(q))
+                        .catch(err => setError(err.message || 'Failed to calculate quote'))
+                } else {
+                    setError('Invoice not found')
+                }
+            }).catch(err => setError(err.message || 'Failed to load invoice'))
+        }
+    }, [id, getInvoice, getQuote])
 
-    if (!invoice) {
+    if (error || !invoice || !quote) {
         return (
             <div className="card">
-                <h2 className="card-title">Invoice not found</h2>
-                <button className="btn btn-primary mt-16" onClick={() => navigate('/invoices')}>Back to invoices</button>
+                <h2 className="card-title">
+                    {error ? error : !invoice ? 'Invoice not found' : 'Calculating quote...'}
+                </h2>
+                {(error || !invoice) && <button className="btn btn-primary mt-16" onClick={() => navigate('/invoices')}>Back to invoices</button>}
             </div>
         )
     }
-
     const actualUser = currentUser || { id: 'user-0', name: 'Demo User' } as any
-    const quote = calculateQuote(actualUser, invoice)
     const duplicate = false
-    const score = scoreAdvance(actualUser, invoice, invoice.documents.length > 0, duplicate)
+    const score = scoreAdvance(actualUser, invoice, (invoice.documents?.length ?? 0) > 0, duplicate)
     const flags = getReviewFlags(actualUser, invoice, score)
 
     const submit = async () => {
@@ -130,7 +142,7 @@ export default function InvoiceAdvance() {
                     <h2 className="card-title">Checks</h2>
                     <div className="verification-list mt-16">
                         {[
-                            { label: 'Supporting document attached', ok: invoice.documents.length > 0 },
+                            { label: 'Supporting document attached', ok: (invoice.documents?.length ?? 0) > 0 },
                             { label: `Amount within ${formatCurrency(quote.maxEligibleInvoiceAmount, invoice.currency)} limit`, ok: invoice.amount <= quote.maxEligibleInvoiceAmount },
                             { label: 'Due date is in the future', ok: new Date(invoice.dueDate).getTime() > Date.now() },
                         ].map((check) => (

@@ -32,5 +32,8 @@ export const AdminService = {
 
     addReview: async (review: Omit<AdminReview, 'id' | 'createdAt'>) => {
         return await api.post<AdminReview>('/admin-reviews', review)
+    },
+    generateAiReview: async (advanceId: string) => {
+        return await api.post<AiReviewSnapshot>(`/admin/advance-requests/${advanceId}/ai-review`)
     }
 }

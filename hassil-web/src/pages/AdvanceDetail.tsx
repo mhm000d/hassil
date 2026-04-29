@@ -56,9 +56,16 @@ export default function AdvanceDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { user: authUser } = useAuth()
-    const { get: getInvoice, update: updateInvoice } = useInvoices()
-    const { get: getAdvance, update: updateAdvance } = useAdvances()
-    const { transactions: allTransactions, create: createTransaction } = useTransactions()
+    const { get: getInvoice } = useInvoices()
+    const { 
+        get: getAdvance, 
+        simulateDisbursement,
+        simulateClientPaymentDetected,
+        simulateUserRepayment,
+        simulateClientPaidHassil,
+        simulateBufferRelease
+    } = useAdvances()
+    const { transactions: allTransactions } = useTransactions()
     const { getAiSnapshot } = useAdmin()
     
     const [advance, setAdvance] = useState<AdvanceRequest | null>(null)
@@ -86,48 +93,17 @@ export default function AdvanceDetail() {
 
     const simulate = async () => {
         if (!advance || !invoice || !authUser) return
-        const now = new Date().toISOString()
 
         if (advance.status === 'Approved') {
-            await updateAdvance(advance.id, { status: 'Disbursed', updatedAt: now })
-            await updateInvoice(invoice.id, { status: 'Disbursed' })
-            await createTransaction({
-                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
-                type: 'AdvanceDisbursement', direction: 'Credit', amount: advance.advanceAmount,
-                description: `${formatCurrency(advance.advanceAmount, invoice.currency)} sent to bank account.`,
-            })
+            await simulateDisbursement(advance.id)
         } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'Disbursed') {
-            await updateAdvance(advance.id, { status: 'ClientPaidHassil', updatedAt: now })
-            await updateInvoice(invoice.id, { status: 'ClientPaidHassil' })
-            await createTransaction({
-                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
-                type: 'ClientPaymentToHassil', direction: 'Credit', amount: invoice.amount,
-                description: 'Client paid the invoice to Hassil.',
-            })
+            await simulateClientPaidHassil(advance.id)
         } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'ClientPaidHassil') {
-            await updateAdvance(advance.id, { status: 'Repaid', updatedAt: now })
-            await updateInvoice(invoice.id, { status: 'Paid' })
-            await createTransaction({
-                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
-                type: 'BufferRelease', direction: 'Credit', amount: advance.settlementBufferAmount,
-                description: 'Remaining buffer released.',
-            })
+            await simulateBufferRelease(advance.id)
         } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'Disbursed') {
-            await updateAdvance(advance.id, { status: 'ClientPaymentDetected', updatedAt: now })
-            await updateInvoice(invoice.id, { status: 'ClientPaymentDetected' })
-            await createTransaction({
-                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
-                type: 'DetectedIncomingPayment', direction: 'Internal', amount: invoice.amount,
-                description: 'Client payment detected in freelancer account.',
-            })
+            await simulateClientPaymentDetected(advance.id)
         } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'ClientPaymentDetected') {
-            await updateAdvance(advance.id, { status: 'Repaid', updatedAt: now })
-            await updateInvoice(invoice.id, { status: 'Paid' })
-            await createTransaction({
-                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
-                type: 'UserRepayment', direction: 'Debit', amount: advance.expectedRepaymentAmount,
-                description: 'Advance and fee repaid after client payment.',
-            })
+            await simulateUserRepayment(advance.id)
         }
         await load()
     }

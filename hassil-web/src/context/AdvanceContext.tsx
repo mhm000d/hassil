@@ -10,6 +10,12 @@ interface AdvanceContextValue {
     get: (id: string) => Promise<AdvanceRequest | undefined>
     create: (advance: AdvanceRequest) => Promise<AdvanceRequest>
     update: (id: string, patch: Partial<AdvanceRequest>) => Promise<AdvanceRequest | undefined>
+    getQuote: (invoiceId: string) => Promise<any>
+    simulateDisbursement: (id: string) => Promise<AdvanceRequest | undefined>
+    simulateClientPaymentDetected: (id: string) => Promise<AdvanceRequest | undefined>
+    simulateUserRepayment: (id: string) => Promise<AdvanceRequest | undefined>
+    simulateClientPaidHassil: (id: string) => Promise<AdvanceRequest | undefined>
+    simulateBufferRelease: (id: string) => Promise<AdvanceRequest | undefined>
 }
 
 export const AdvanceContext = createContext<AdvanceContextValue>({
@@ -20,6 +26,12 @@ export const AdvanceContext = createContext<AdvanceContextValue>({
     get: async () => undefined,
     create: async (a) => a,
     update: async () => undefined,
+    getQuote: async () => ({}),
+    simulateDisbursement: async () => undefined,
+    simulateClientPaymentDetected: async () => undefined,
+    simulateUserRepayment: async () => undefined,
+    simulateClientPaidHassil: async () => undefined,
+    simulateBufferRelease: async () => undefined,
 })
 
 export function AdvanceProvider({ children }: { children: ReactNode }) {
@@ -60,8 +72,46 @@ export function AdvanceProvider({ children }: { children: ReactNode }) {
         return res
     }
 
+    const getQuote = async (invoiceId: string) => {
+        return await AdvanceService.getQuote(invoiceId)
+    }
+
+    const simulateDisbursement = async (id: string) => {
+        const res = await AdvanceService.simulateDisbursement(id)
+        await fetchAdvances()
+        return res
+    }
+
+    const simulateClientPaymentDetected = async (id: string) => {
+        const res = await AdvanceService.simulateClientPaymentDetected(id)
+        await fetchAdvances()
+        return res
+    }
+
+    const simulateUserRepayment = async (id: string) => {
+        const res = await AdvanceService.simulateUserRepayment(id)
+        await fetchAdvances()
+        return res
+    }
+
+    const simulateClientPaidHassil = async (id: string) => {
+        const res = await AdvanceService.simulateClientPaidHassil(id)
+        await fetchAdvances()
+        return res
+    }
+
+    const simulateBufferRelease = async (id: string) => {
+        const res = await AdvanceService.simulateBufferRelease(id)
+        await fetchAdvances()
+        return res
+    }
+
     return (
-        <AdvanceContext.Provider value={{ advances, loading, error, refetch: fetchAdvances, get, create, update }}>
+        <AdvanceContext.Provider value={{ 
+            advances, loading, error, refetch: fetchAdvances, get, create, update,
+            getQuote, simulateDisbursement, simulateClientPaymentDetected,
+            simulateUserRepayment, simulateClientPaidHassil, simulateBufferRelease
+        }}>
             {children}
         </AdvanceContext.Provider>
     )

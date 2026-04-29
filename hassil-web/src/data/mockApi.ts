@@ -599,6 +599,107 @@ export const mockApi = {
         return Promise.resolve(ok(_advances.find((adv) => adv.id === id)))
     },
 
+    // Quoting
+    getQuote(userId: string, invoiceId: string): Promise<ApiResponse<any>> {
+        const user = authApi.me(userId)
+        const invoice = _invoices.find(i => i.id === invoiceId)
+        if (!user || !invoice) return Promise.reject('User or Invoice not found')
+        return Promise.resolve(ok(calculateQuote(user, invoice)))
+    },
+
+    // Granular Simulations
+    async simulateDisbursement(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        const adv = _advances.find(a => a.id === id)
+        if (!adv || adv.status !== 'Approved') throw new Error('Invalid state for disbursement')
+        const now = new Date().toISOString()
+        
+        await this.updateAdvanceRequest(id, { status: 'Disbursed', updatedAt: now })
+        await this.updateInvoice(adv.invoiceId, { status: 'Disbursed' })
+        await this.addTransaction({
+            id: generateId('tx'), userId: adv.userId, invoiceId: adv.invoiceId, advanceRequestId: adv.id,
+            type: 'AdvanceDisbursement', direction: 'Credit', amount: adv.advanceAmount,
+            description: 'Advance sent to bank account (Simulated).',
+            createdAt: now,
+        })
+        return ok(_advances.find(a => a.id === id))
+    },
+
+    async simulateClientPaymentDetected(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        const adv = _advances.find(a => a.id === id)
+        if (!adv || adv.status !== 'Disbursed') throw new Error('Invalid state')
+        const now = new Date().toISOString()
+        const inv = _invoices.find(i => i.id === adv.invoiceId)!
+
+        await this.updateAdvanceRequest(id, { status: 'ClientPaymentDetected', updatedAt: now })
+        await this.updateInvoice(inv.id, { status: 'ClientPaymentDetected' })
+        await this.addTransaction({
+            id: generateId('tx'), userId: adv.userId, invoiceId: inv.id, advanceRequestId: adv.id,
+            type: 'DetectedIncomingPayment', direction: 'Internal', amount: inv.amount,
+            description: 'Client payment detected in freelancer account (Simulated).', createdAt: now,
+        })
+        return ok(_advances.find(a => a.id === id))
+    },
+
+    async simulateUserRepayment(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        const adv = _advances.find(a => a.id === id)
+        if (!adv || adv.status !== 'ClientPaymentDetected') throw new Error('Invalid state')
+        const now = new Date().toISOString()
+        const inv = _invoices.find(i => i.id === adv.invoiceId)!
+
+        await this.updateAdvanceRequest(id, { status: 'Repaid', updatedAt: now })
+        await this.updateInvoice(inv.id, { status: 'Paid' })
+        await this.addTransaction({
+            id: generateId('tx'), userId: adv.userId, invoiceId: inv.id, advanceRequestId: adv.id,
+            type: 'UserRepayment', direction: 'Debit', amount: adv.expectedRepaymentAmount,
+            description: 'Advance and fee repaid after client payment (Simulated).', createdAt: now,
+        })
+        return ok(_advances.find(a => a.id === id))
+    },
+
+    async simulateClientPaidHassil(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        const adv = _advances.find(a => a.id === id)
+        if (!adv || adv.status !== 'Disbursed') throw new Error('Invalid state')
+        const now = new Date().toISOString()
+        const inv = _invoices.find(i => i.id === adv.invoiceId)!
+
+        await this.updateAdvanceRequest(id, { status: 'ClientPaidHassil', updatedAt: now })
+        await this.updateInvoice(inv.id, { status: 'ClientPaidHassil' })
+        await this.addTransaction({
+            id: generateId('tx'), userId: adv.userId, invoiceId: inv.id, advanceRequestId: adv.id,
+            type: 'ClientPaymentToHassil', direction: 'Credit', amount: inv.amount,
+            description: 'Client paid the invoice to Hassil (Simulated).', createdAt: now,
+        })
+        return ok(_advances.find(a => a.id === id))
+    },
+
+    async simulateBufferRelease(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        const adv = _advances.find(a => a.id === id)
+        if (!adv || adv.status !== 'ClientPaidHassil') throw new Error('Invalid state')
+        const now = new Date().toISOString()
+        const inv = _invoices.find(i => i.id === adv.invoiceId)!
+
+        await this.updateAdvanceRequest(id, { status: 'Repaid', updatedAt: now })
+        await this.updateInvoice(inv.id, { status: 'Paid' })
+        await this.addTransaction({
+            id: generateId('tx'), userId: adv.userId, invoiceId: inv.id, advanceRequestId: adv.id,
+            type: 'BufferRelease', direction: 'Credit', amount: adv.settlementBufferAmount,
+            description: 'Remaining buffer released (Simulated).', createdAt: now,
+        })
+        return ok(_advances.find(a => a.id === id))
+    },
+
+    // Invoice actions
+    async submitInvoice(id: string): Promise<ApiResponse<Invoice | undefined>> {
+        return this.updateInvoice(id, { status: 'Submitted' })
+    },
+
+    async addInvoiceDocument(invoiceId: string, doc: any): Promise<ApiResponse<Invoice | undefined>> {
+        const inv = _invoices.find(i => i.id === invoiceId)
+        if (!inv) throw new Error('Invoice not found')
+        const updatedDocs = [...(inv.documents || []), { ...doc, id: generateId('doc'), uploadedAt: new Date().toISOString() }]
+        return this.updateInvoice(invoiceId, { documents: updatedDocs })
+    },
+
     // Transactions
     listTransactions(userId?: string): Promise<ApiResponse<Transaction[]>> {
         const result = userId ? _transactions.filter((tx) => tx.userId === userId) : _transactions
@@ -977,7 +1078,7 @@ export function scoreAdvance(user: User, invoice: Invoice, hasEvidence: boolean,
 
 export function getReviewFlags(user: User, invoice: Invoice, score: number): string[] {
     const flags: string[] = []
-    if (invoice.documents.length === 0) flags.push('Supporting document is missing')
+    if ((invoice.documents?.length ?? 0) === 0) flags.push('Supporting document is missing')
     if (score < 75) flags.push(`Review score below auto-approve threshold (${score}/100)`)
     if (user.trustScore < 50) flags.push('Trust score below recommended threshold')
     if (invoice.amount > 20000) flags.push('Invoice amount exceeds standard limit')

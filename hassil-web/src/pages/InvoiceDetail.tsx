@@ -13,7 +13,7 @@ import Icon from '../components/Icon'
 
 function VerificationChecklist({ invoice, quote }: { invoice: Invoice; quote: ReturnType<typeof calculateQuote> }) {
     const checks = [
-        { label: 'Supporting document attached', ok: invoice.documents.length > 0 },
+        { label: 'Supporting document attached', ok: (invoice.documents?.length ?? 0) > 0 },
         { label: `Invoice amount within ${formatCurrency(quote.maxEligibleInvoiceAmount, invoice.currency)} limit`, ok: invoice.amount <= quote.maxEligibleInvoiceAmount },
         { label: 'Due date is inside the eligible window', ok: new Date(invoice.dueDate).getTime() > Date.now() },
         {
@@ -56,7 +56,7 @@ export default function InvoiceDetail() {
             documentType: 'Supporting Evidence',
             uploadedAt: new Date().toISOString(),
         }
-        const updated = { ...invoice, documents: [...invoice.documents, doc] }
+        const updated = { ...invoice, documents: [...(invoice.documents || []), doc] }
         await updateInvoice(invoice.id, { documents: updated.documents })
         setInvoice(updated)
     }
@@ -103,9 +103,9 @@ export default function InvoiceDetail() {
                     </DisclosurePanel>
                     <div className="mock-upload mt-18">
                         <div className="space-between">
-                            <h3>Evidence ({invoice.documents.length} file{invoice.documents.length !== 1 ? 's' : ''})</h3>
+                            <h3>Evidence ({(invoice.documents?.length ?? 0)} file{(invoice.documents?.length ?? 0) !== 1 ? 's' : ''})</h3>
                         </div>
-                        {invoice.documents.map((doc) => (
+                        { (invoice.documents || []).map((doc) => (
                             <div key={doc.id} className="detail-item mt-8">
                                 <span>{doc.documentType}</span>
                                 <strong>{doc.fileName}</strong>
