@@ -549,7 +549,7 @@ public enum AiRiskLevel { Low, Medium, High }
 public enum AiRecommendedAction { Approve, ManualReview, Reject }
 ```
 
-Main entities:
+Main models/entities:
 
 ```csharp
 public sealed class User
@@ -1168,11 +1168,12 @@ Hassil.Api/
     AdminReviewsController.cs
     DashboardController.cs
   Domain/
-    Entities/
+    Models/
     Enums/
-  Data/
-    HassilDbContext.cs
+  Database/
+    Configurations/
     Migrations/
+    HassilDbContext.cs
   Services/
     InvoiceFingerprintService.cs
     AdvanceCalculatorService.cs
