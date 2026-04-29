@@ -28,6 +28,14 @@ public static class ApiEndpoints
         public const string Me = $"{Base}/me";
     }
 
+    // -- Trust Score Endpoints ----------------------------------------------
+    public static class TrustScores
+    {
+        private const string Base = $"{ApiBase}/trust-score";
+
+        public const string Events = $"{Base}/events";
+    }
+
     // -- Invoice Endpoints ----------------------------------------------------
     public static class Invoices
     {

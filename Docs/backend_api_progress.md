@@ -33,21 +33,21 @@ This document explains what the backend currently supports, how the existing end
   - [Reject Advance Request Manually](#reject-advance-request-manually)
   - [Request More Information](#request-more-information)
   - [Generate AI Review Summary](#generate-ai-review-summary)
+  - [Get Trust Score Events](#get-trust-score-events)
 - [Recommended Current Workflow](#recommended-current-workflow)
 - [Error Response Shape](#error-response-shape)
 - [Recommended Order For Remaining Features](#recommended-order-for-remaining-features)
-  - [1. Trust Score Events](#1-trust-score-events)
-  - [2. Dashboard And Transactions](#2-dashboard-and-transactions)
+  - [1. Dashboard And Transactions](#1-dashboard-and-transactions)
 
 ## Current Backend Scope
 
 The backend currently covers the first working slice of the demo:
 
 ```text
-seed demo data -> demo login -> authorize requests -> create/list/submit invoices -> quote/create advances -> confirm factoring clients -> admin review -> simulate advances
+seed demo data -> demo login -> authorize requests -> create/list/submit invoices -> quote/create advances -> confirm factoring clients -> admin review -> simulate advances -> trust score history
 ```
 
-It does not yet include trust-score event listing, dashboard summaries, or standalone transaction listing.
+It does not yet include dashboard summaries or standalone transaction listing.
 
 ## How To Use Swagger Authorization
 
@@ -594,6 +594,42 @@ ManualReview
 Reject
 ```
 
+### Get Trust Score Events
+
+```http
+GET /api/trust-score/events
+```
+
+Returns the authenticated user's current trust score and score-change history.
+
+Example response shape:
+
+```json
+{
+  "currentScore": 60,
+  "events": [
+    {
+      "id": "event-id",
+      "oldScore": 55,
+      "newScore": 60,
+      "delta": 5,
+      "reason": "Client confirmed factoring invoice.",
+      "createdAt": "2026-04-30T10:00:00Z"
+    }
+  ]
+}
+```
+
+Events are ordered newest first.
+
+Trust score events are created by other flows, such as:
+
+- demo seeding baseline score setup
+- client confirmation
+- client dispute
+- repayment completion
+- admin rejection
+
 ## Recommended Current Workflow
 
 ```text
@@ -615,6 +651,7 @@ Reject
 16. GET /api/admin/advance-requests/{id}
 17. POST /api/admin/advance-requests/{id}/ai-review
 18. POST /api/admin/advance-requests/{id}/approve
+19. GET /api/trust-score/events
 ```
 
 ## Error Response Shape
@@ -657,20 +694,7 @@ Common error codes so far:
 
 Build one vertical slice at a time.
 
-### 1. Trust Score Events
-
-```http
-GET /api/trust-score/events
-```
-
-Build this after repayment flows update trust score.
-
-Add:
-
-- `TrustScoreService`
-- trust-score history endpoint
-
-### 2. Dashboard And Transactions
+### 1. Dashboard And Transactions
 
 ```http
 GET /api/dashboard/summary
