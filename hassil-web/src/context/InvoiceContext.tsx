@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Invoice } from '../types'
 import { InvoiceService } from '../services'
 
@@ -7,13 +7,19 @@ interface InvoiceContextValue {
     loading: boolean
     error: string | null
     refetch: () => Promise<void>
+    get: (id: string) => Promise<Invoice | undefined>
+    create: (invoice: Invoice) => Promise<Invoice>
+    update: (id: string, patch: Partial<Invoice>) => Promise<Invoice | undefined>
 }
 
 export const InvoiceContext = createContext<InvoiceContextValue>({
     invoices: [],
     loading: true,
     error: null,
-    refetch: async () => {}
+    refetch: async () => {},
+    get: async () => undefined,
+    create: async (i) => i,
+    update: async () => undefined,
 })
 
 export function InvoiceProvider({ children }: { children: ReactNode }) {
@@ -38,8 +44,24 @@ export function InvoiceProvider({ children }: { children: ReactNode }) {
         fetchInvoices()
     }, [fetchInvoices])
 
+    const get = async (id: string) => {
+        return await InvoiceService.get(id)
+    }
+
+    const create = async (invoice: Invoice) => {
+        const res = await InvoiceService.create(invoice)
+        await fetchInvoices()
+        return res
+    }
+
+    const update = async (id: string, patch: Partial<Invoice>) => {
+        const res = await InvoiceService.update(id, patch)
+        await fetchInvoices()
+        return res
+    }
+
     return (
-        <InvoiceContext.Provider value={{ invoices, loading, error, refetch: fetchInvoices }}>
+        <InvoiceContext.Provider value={{ invoices, loading, error, refetch: fetchInvoices, get, create, update }}>
             {children}
         </InvoiceContext.Provider>
     )

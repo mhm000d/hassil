@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { AdvanceRequest, AiReviewSnapshot, Invoice, Transaction, User } from '../types'
+import type { AdvanceRequest, AiReviewSnapshot, Invoice } from '../types'
 import {
-    mockApi,
-    mockUsers,
-    generateId,
     formatCurrency,
     formatDate,
-    formatDateTime,
     getModelLabel,
     getNextSimulationLabel,
 } from '../data/mockApi'
+
+import { useAuth, useInvoices, useAdvances, useTransactions, useAdmin } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
 import ModelBadge from '../components/ModelBadge'
@@ -20,8 +18,6 @@ import LifecycleStepper from '../components/LifecycleStepper'
 import TransactionTimeline from '../components/TransactionTimeline'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Icon from '../components/Icon'
-
-const currentUser: User = mockUsers[0]
 
 function StatCard({ tone, label, value, sub }: { tone: 'gold' | 'green' | 'amber'; label: string; value: string; sub?: string }) {
     const toneLabel = { gold: '01', green: '02', amber: '03' }[tone]
@@ -59,70 +55,78 @@ function AiReviewCard({ snapshot }: { snapshot: AiReviewSnapshot }) {
 export default function AdvanceDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+    const { user: authUser } = useAuth()
+    const { get: getInvoice, update: updateInvoice } = useInvoices()
+    const { get: getAdvance, update: updateAdvance } = useAdvances()
+    const { transactions: allTransactions, create: createTransaction } = useTransactions()
+    const { getAiSnapshot } = useAdmin()
+    
     const [advance, setAdvance] = useState<AdvanceRequest | null>(null)
     const [invoice, setInvoice] = useState<Invoice | null>(null)
-    const [transactions, setTransactions] = useState<Transaction[]>([])
     const [aiSnapshot, setAiSnapshot] = useState<AiReviewSnapshot | null>(null)
 
     const load = async () => {
         if (!id) return
-        const advRes = await mockApi.getAdvanceRequest(id)
-        if (!advRes.data) return
-        setAdvance(advRes.data)
-        const invRes = await mockApi.getInvoice(advRes.data.invoiceId)
-        if (invRes.data) setInvoice(invRes.data)
-        const txRes = await mockApi.listTransactions()
-        setTransactions(txRes.data.filter((tx) => tx.advanceRequestId === id))
-        const aiRes = await mockApi.getAiSnapshot(id)
-        if (aiRes.data) setAiSnapshot(aiRes.data)
+        const advData = await getAdvance(id)
+        if (!advData) return
+        setAdvance(advData)
+        
+        const [invData, aiData] = await Promise.all([
+            getInvoice(advData.invoiceId),
+            getAiSnapshot(id)
+        ])
+        
+        if (invData) setInvoice(invData)
+        if (aiData) setAiSnapshot(aiData)
     }
 
     useEffect(() => { load() }, [id])
 
+    const transactions = allTransactions.filter((tx) => tx.advanceRequestId === id)
+
     const simulate = async () => {
-        if (!advance || !invoice) return
+        if (!advance || !invoice || !authUser) return
         const now = new Date().toISOString()
 
         if (advance.status === 'Approved') {
-            await mockApi.updateAdvanceRequest(advance.id, { status: 'Disbursed', updatedAt: now })
-            await mockApi.updateInvoice(invoice.id, { status: 'Disbursed' })
-            await mockApi.addTransaction({
-                id: generateId('tx'), userId: advance.userId, invoiceId: invoice.id, advanceRequestId: advance.id,
+            await updateAdvance(advance.id, { status: 'Disbursed', updatedAt: now })
+            await updateInvoice(invoice.id, { status: 'Disbursed' })
+            await createTransaction({
+                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
                 type: 'AdvanceDisbursement', direction: 'Credit', amount: advance.advanceAmount,
                 description: `${formatCurrency(advance.advanceAmount, invoice.currency)} sent to bank account.`,
-                createdAt: now,
             })
         } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'Disbursed') {
-            await mockApi.updateAdvanceRequest(advance.id, { status: 'ClientPaidHassil', updatedAt: now })
-            await mockApi.updateInvoice(invoice.id, { status: 'ClientPaidHassil' })
-            await mockApi.addTransaction({
-                id: generateId('tx'), userId: advance.userId, invoiceId: invoice.id, advanceRequestId: advance.id,
+            await updateAdvance(advance.id, { status: 'ClientPaidHassil', updatedAt: now })
+            await updateInvoice(invoice.id, { status: 'ClientPaidHassil' })
+            await createTransaction({
+                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
                 type: 'ClientPaymentToHassil', direction: 'Credit', amount: invoice.amount,
-                description: 'Client paid the invoice to Hassil.', createdAt: now,
+                description: 'Client paid the invoice to Hassil.',
             })
         } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'ClientPaidHassil') {
-            await mockApi.updateAdvanceRequest(advance.id, { status: 'Repaid', updatedAt: now })
-            await mockApi.updateInvoice(invoice.id, { status: 'Paid' })
-            await mockApi.addTransaction({
-                id: generateId('tx'), userId: advance.userId, invoiceId: invoice.id, advanceRequestId: advance.id,
+            await updateAdvance(advance.id, { status: 'Repaid', updatedAt: now })
+            await updateInvoice(invoice.id, { status: 'Paid' })
+            await createTransaction({
+                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
                 type: 'BufferRelease', direction: 'Credit', amount: advance.settlementBufferAmount,
-                description: 'Remaining buffer released.', createdAt: now,
+                description: 'Remaining buffer released.',
             })
         } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'Disbursed') {
-            await mockApi.updateAdvanceRequest(advance.id, { status: 'ClientPaymentDetected', updatedAt: now })
-            await mockApi.updateInvoice(invoice.id, { status: 'ClientPaymentDetected' })
-            await mockApi.addTransaction({
-                id: generateId('tx'), userId: advance.userId, invoiceId: invoice.id, advanceRequestId: advance.id,
+            await updateAdvance(advance.id, { status: 'ClientPaymentDetected', updatedAt: now })
+            await updateInvoice(invoice.id, { status: 'ClientPaymentDetected' })
+            await createTransaction({
+                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
                 type: 'DetectedIncomingPayment', direction: 'Internal', amount: invoice.amount,
-                description: 'Client payment detected in freelancer account.', createdAt: now,
+                description: 'Client payment detected in freelancer account.',
             })
         } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'ClientPaymentDetected') {
-            await mockApi.updateAdvanceRequest(advance.id, { status: 'Repaid', updatedAt: now })
-            await mockApi.updateInvoice(invoice.id, { status: 'Paid' })
-            await mockApi.addTransaction({
-                id: generateId('tx'), userId: advance.userId, invoiceId: invoice.id, advanceRequestId: advance.id,
+            await updateAdvance(advance.id, { status: 'Repaid', updatedAt: now })
+            await updateInvoice(invoice.id, { status: 'Paid' })
+            await createTransaction({
+                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
                 type: 'UserRepayment', direction: 'Debit', amount: advance.expectedRepaymentAmount,
-                description: 'Advance and fee repaid after client payment.', createdAt: now,
+                description: 'Advance and fee repaid after client payment.',
             })
         }
         await load()

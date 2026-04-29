@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { AuthProvider, InvoiceProvider, AdvanceProvider, TransactionProvider } from './context'
+import { AuthProvider, InvoiceProvider, AdvanceProvider, TransactionProvider, AdminProvider } from './context'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -10,7 +10,9 @@ createRoot(document.getElementById('root')!).render(
       <InvoiceProvider>
         <AdvanceProvider>
           <TransactionProvider>
-            <App />
+            <AdminProvider>
+              <App />
+            </AdminProvider>
           </TransactionProvider>
         </AdvanceProvider>
       </InvoiceProvider>

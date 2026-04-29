@@ -1,22 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { AdvanceRequest, Invoice, User } from '../types'
+import type { AdvanceRequest, Invoice } from '../types'
 import {
-    mockApi,
-    mockUsers,
     generateId,
     formatCurrency,
     calculateQuote,
     scoreAdvance,
     getReviewFlags,
 } from '../data/mockApi'
+import { useAuth, useInvoices, useAdvances } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import ModelBadge from '../components/ModelBadge'
 import ReviewScore from '../components/ReviewScore'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Icon from '../components/Icon'
-
-const currentUser: User = mockUsers[0]
 
 function QuoteItem({ label, value, tone }: { label: string; value: string; tone?: 'gold' | 'green' }) {
     return (
@@ -30,13 +27,17 @@ function QuoteItem({ label, value, tone }: { label: string; value: string; tone?
 export default function InvoiceAdvance() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+    const { user: currentUser } = useAuth()
+    const { get: getInvoice, update: updateInvoice } = useInvoices()
+    const { create: createAdvance } = useAdvances()
+
     const [invoice, setInvoice] = useState<Invoice | null>(null)
     const [accepted, setAccepted] = useState(false)
     const [submitting, setSubmitting] = useState(false)
 
     useEffect(() => {
-        if (id) mockApi.getInvoice(id).then((res) => setInvoice(res.data ?? null))
-    }, [id])
+        if (id) getInvoice(id).then((res) => setInvoice(res ?? null))
+    }, [id, getInvoice])
 
     if (!invoice) {
         return (
@@ -47,19 +48,19 @@ export default function InvoiceAdvance() {
         )
     }
 
-    const quote = calculateQuote(currentUser, invoice)
+    const actualUser = currentUser || { id: 'user-0', name: 'Demo User' } as any
+    const quote = calculateQuote(actualUser, invoice)
     const duplicate = false
-    const score = scoreAdvance(currentUser, invoice, invoice.documents.length > 0, duplicate)
-    const flags = getReviewFlags(currentUser, invoice, score)
+    const score = scoreAdvance(actualUser, invoice, invoice.documents.length > 0, duplicate)
+    const flags = getReviewFlags(actualUser, invoice, score)
 
     const submit = async () => {
         if (!accepted || submitting) return
         setSubmitting(true)
         const advanceId = generateId('adv')
-        const advance: AdvanceRequest = {
+        const advance: Partial<AdvanceRequest> = {
             id: advanceId,
             invoiceId: invoice.id,
-            userId: currentUser.id,
             financingModel: quote.financingModel,
             repaymentParty: quote.repaymentParty,
             clientNotificationRequired: quote.clientNotificationRequired,
@@ -73,11 +74,9 @@ export default function InvoiceAdvance() {
             approvalMode: score >= 75 ? 'Auto' : 'Manual',
             status: score >= 75 ? 'Approved' : 'PendingReview',
             termsAcceptedAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
         }
-        await mockApi.createAdvanceRequest(advance)
-        await mockApi.updateInvoice(invoice.id, { advanceRequestId: advanceId, status: advance.status === 'Approved' ? 'Approved' : 'PendingReview' })
+        await createAdvance(advance as AdvanceRequest)
+        await updateInvoice(invoice.id, { advanceRequestId: advanceId, status: advance.status === 'Approved' ? 'Approved' : 'PendingReview' })
         navigate(`/advances/${advanceId}`)
     }
 

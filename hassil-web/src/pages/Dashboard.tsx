@@ -14,11 +14,10 @@ export default function Dashboard() {
     const navigate = useNavigate()
     const { user: authUser } = useAuth()
     
-    const { invoices, loading: invLoading } = useInvoices()
-    const { advances, loading: advLoading } = useAdvances()
-    const { transactions, loading: txLoading } = useTransactions()
+    const { invoices } = useInvoices()
+    const { advances } = useAdvances()
+    const { transactions } = useTransactions()
 
-    const loading = invLoading || advLoading || txLoading
 
     const model = (authUser?.accountType ?? seedUser.accountType) === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'
     const displayName = authUser?.displayName
@@ -28,7 +27,7 @@ export default function Dashboard() {
         ?? seedUser.email
 
     const openInvoices = invoices.filter((inv) => inv.status !== 'Paid' && inv.status !== 'Rejected')
-    const availableNow = openInvoices.reduce((sum, inv) => sum + calculateQuote(seedUser, inv).advanceAmount, 0)
+    const availableNow = openInvoices.reduce((sum, inv) => sum + calculateQuote(authUser || seedUser, inv).advanceAmount, 0)
     const outstanding = openInvoices.reduce((sum, inv) => sum + inv.amount, 0)
 
     const activeAdvances = advances.filter((adv) => !['Repaid', 'Rejected'].includes(adv.status))

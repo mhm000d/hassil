@@ -1,19 +1,18 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Invoice, User } from '../types'
+import type { Invoice } from '../types'
 import {
-    mockApi,
     mockUsers,
     generateId,
     formatCurrency,
     daysUntilDate,
     calculateQuote,
 } from '../data/mockApi'
+import { useAuth } from '../hooks'
+import { InvoiceService } from '../services/invoiceService'
 import PageHeading from '../components/PageHeading'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Icon from '../components/Icon'
-
-const currentUser: User = mockUsers[0]
 
 function createFingerprint(invoiceNumber: string, clientEmail: string, amount: number, dueDate: string, source: string) {
     return `${invoiceNumber}-${clientEmail}-${amount}-${dueDate}-${source}`
@@ -21,6 +20,9 @@ function createFingerprint(invoiceNumber: string, clientEmail: string, amount: n
 
 export default function NewInvoice() {
     const navigate = useNavigate()
+    const { user: currentUser } = useAuth()
+    const actualUser = currentUser || mockUsers[0]
+    
     const [form, setForm] = useState({
         clientName: 'Noura Retail Group',
         clientEmail: 'ap@nouraretail.sa',
@@ -37,7 +39,7 @@ export default function NewInvoice() {
     })
 
     const fingerprint = createFingerprint(form.invoiceNumber, form.clientEmail, Number(form.amount) || 0, form.dueDate, form.receivableSource)
-    const quote = calculateQuote(currentUser, { ...form, id: '', userId: '', clientId: '', client: { id: '', name: form.clientName, email: form.clientEmail }, status: 'Submitted', fingerprint, createdAt: '', documents: [] } as Invoice)
+    const quote = calculateQuote(actualUser, { ...form, id: '', userId: '', clientId: '', client: { id: '', name: form.clientName, email: form.clientEmail }, status: 'Submitted', fingerprint, createdAt: '', documents: [] } as Invoice)
     const dueDays = daysUntilDate(form.dueDate)
 
     const errors = [
@@ -58,13 +60,11 @@ export default function NewInvoice() {
         e.preventDefault()
         if (errors.length > 0) return
 
-        const clientId = generateId('client')
         const invoiceId = generateId('inv')
-        const invoice: Invoice = {
+        const invoice: Partial<Invoice> = {
             id: invoiceId,
-            userId: currentUser.id,
-            clientId,
-            client: { id: clientId, name: form.clientName, email: form.clientEmail, country: form.clientCountry },
+            clientId: generateId('client'),
+            client: { id: '', name: form.clientName, email: form.clientEmail, country: form.clientCountry },
             invoiceNumber: form.invoiceNumber,
             receivableSource: form.receivableSource,
             amount: Number(form.amount),
@@ -75,12 +75,8 @@ export default function NewInvoice() {
             paymentTerms: form.paymentTerms,
             status: 'Submitted',
             fingerprint,
-            createdAt: new Date().toISOString(),
-            documents: form.hasEvidence
-                ? [{ id: generateId('doc'), invoiceId, fileName: 'invoice-evidence.pdf', documentType: 'Supporting Evidence', uploadedAt: new Date().toISOString() }]
-                : [],
         }
-        await mockApi.createInvoice(invoice)
+        await InvoiceService.create(invoice as Invoice)
         navigate(`/invoices/${invoiceId}`)
     }
 

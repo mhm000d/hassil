@@ -1,5 +1,5 @@
 import { getStoredTokens } from './authService'
-import { mockApi, authApi } from '../data/mockApi'
+import { mockApi, authApi, generateId } from '../data/mockApi'
 import type { Invoice, AdvanceRequest } from '../types'
 
 // Fake delay to simulate network latency
@@ -21,47 +21,43 @@ async function apiClient<T>(endpoint: string, { authRequired = true, method = 'G
         if (!tokens?.access_token) {
             throw new Error('Authentication required')
         }
-        userId = tokens.access_token // In mock, token IS the user ID
+        // In mock, token might be the ID or the email. Resolve to real ID.
+        const authUser = authApi.me(tokens.access_token)
+        userId = authUser?.id || tokens.access_token
     }
 
     try {
         // --- Auth Routes ---
         if (endpoint === '/auth/me' && method === 'GET') {
-            const users = JSON.parse(localStorage.getItem('hassil_registered_users') ?? '[]')
-            const authUser = users.find((u: any) => u.email === userId) // userId is the email token
-            const mockUser = mockUsers.find(u => u.email === userId || u.id === userId)
-
-            if (!authUser && !mockUser) throw new Error('User not found')
-
-            const baseUser = mockUser || { id: `u-${Date.now()}`, trustScore: 100 }
-
-            return {
-                ...baseUser,
-                name: authUser?.name || mockUser?.smallBusinessProfile?.businessName || mockUser?.freelancerProfile?.fullName,
-                displayName: authUser?.displayName || mockUser?.smallBusinessProfile?.businessName || mockUser?.freelancerProfile?.fullName,
-                email: authUser?.email || mockUser?.email,
-                accountType: authUser?.accountType || mockUser?.accountType
-            } as T
+            const authUser = authApi.me(userId!)
+            if (!authUser) throw new Error('User not found')
+            return authUser as T
         }
         if (endpoint === '/auth/me' && method === 'PUT') {
             const payload = JSON.parse(body)
-            authApi.updateDisplayName(payload.email, payload.displayName)
+            authApi.completeProfile(payload)
             return null as T
         }
         if (endpoint === '/auth/login' && method === 'POST') {
             const params = new URLSearchParams(body)
             const result = authApi.login(params.get('username') || '', params.get('password') || '')
             if (!result.success) throw new Error(result.error)
-            return { access_token: result.user!.email, refresh_token: 'fake-refresh-token' } as T
+            return { access_token: result.user!.id, refresh_token: 'fake-refresh-token' } as T
         }
         if (endpoint === '/auth/signup' && method === 'POST') {
             const payload = JSON.parse(body)
             const result = authApi.register(payload)
             if (!result.success) throw new Error(result.error)
-            return { access_token: payload.email, refresh_token: 'fake-refresh-token' } as T
+            return { access_token: result.user!.id, refresh_token: 'fake-refresh-token' } as T
         }
         if (endpoint === '/auth/logout' && method === 'DELETE') {
             return null as T
+        }
+
+        // --- Dashboard ---
+        if (endpoint === '/dashboard/summary' && method === 'GET') {
+            const res = await mockApi.getDashboardSummary(userId!)
+            return res.data as T
         }
 
         // --- Invoices ---
@@ -75,7 +71,14 @@ async function apiClient<T>(endpoint: string, { authRequired = true, method = 'G
             return res.data as T
         }
         if (endpoint === '/invoices' && method === 'POST') {
-            const res = await mockApi.createInvoice(JSON.parse(body) as Invoice)
+            const payload = JSON.parse(body)
+            const res = await mockApi.createInvoice({ ...payload, userId: userId! } as Invoice)
+            return res.data as T
+        }
+        if (endpoint.startsWith('/invoices/') && (method === 'PUT' || method === 'PATCH')) {
+            const id = endpoint.split('/')[2]
+            const payload = JSON.parse(body)
+            const res = await mockApi.updateInvoice(id, payload)
             return res.data as T
         }
 
@@ -90,7 +93,14 @@ async function apiClient<T>(endpoint: string, { authRequired = true, method = 'G
             return res.data as T
         }
         if (endpoint === '/advances' && method === 'POST') {
-            const res = await mockApi.createAdvanceRequest(JSON.parse(body) as AdvanceRequest)
+            const payload = JSON.parse(body)
+            const res = await mockApi.createAdvanceRequest({ ...payload, userId: userId! } as AdvanceRequest)
+            return res.data as T
+        }
+        if (endpoint.startsWith('/advances/') && (method === 'PUT' || method === 'PATCH')) {
+            const id = endpoint.split('/')[2]
+            const payload = JSON.parse(body)
+            const res = await mockApi.updateAdvanceRequest(id, payload)
             return res.data as T
         }
 
@@ -98,6 +108,49 @@ async function apiClient<T>(endpoint: string, { authRequired = true, method = 'G
         if (endpoint === '/transactions' && method === 'GET') {
             const res = await mockApi.listTransactions(userId)
             return res.data as T
+        }
+
+        // --- Admin Global Fetching ---
+        if (endpoint === '/admin/invoices' && method === 'GET') {
+            const res = await mockApi.listInvoices()
+            return res.data as T
+        }
+        if (endpoint === '/admin/advances' && method === 'GET') {
+            const res = await mockApi.listAdvanceRequests()
+            return res.data as T
+        }
+        if (endpoint === '/admin/ai-snapshots' && method === 'GET') {
+            const res = await mockApi.listAiSnapshots()
+            return res.data as T
+        }
+        if (endpoint.startsWith('/ai-snapshots/') && method === 'GET') {
+            const id = endpoint.split('/')[2]
+            const res = await mockApi.getAiSnapshot(id)
+            return res.data as T
+        }
+
+        // --- Admin Reviews ---
+        if (endpoint === '/admin-reviews' && method === 'POST') {
+            const payload = JSON.parse(body)
+            const res = await mockApi.addAdminReview({ ...payload, id: generateId('rev'), createdAt: new Date().toISOString() })
+            return res.data as T
+        }
+        if (endpoint === '/ai-snapshots' && method === 'GET') {
+            const res = await mockApi.listAiSnapshots()
+            return res.data as T
+        }
+
+        // --- Public / Client Confirmation ---
+        if (endpoint.startsWith('/public/confirm/') && method === 'GET') {
+            const token = endpoint.split('/')[3]
+            const res = await mockApi.getClientConfirmation(token)
+            return res.data as T
+        }
+        if (endpoint.startsWith('/public/confirm/') && method === 'POST') {
+            const token = endpoint.split('/')[3]
+            const payload = JSON.parse(body)
+            await mockApi.updateClientConfirmation(token, payload)
+            return null as T
         }
 
         throw new Error(`Mock endpoint not implemented: ${method} ${endpoint}`)
@@ -115,5 +168,3 @@ export const api = {
     del: <T>(endpoint: string, options?: RequestOptions) => apiClient<T>(endpoint, { ...options, method: 'DELETE' })
 }
 
-// Temporary import for mock tokens fallback
-import { mockUsers } from '../data/mockApi'

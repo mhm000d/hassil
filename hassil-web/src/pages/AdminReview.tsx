@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { AdminDecision, AdvanceRequest, AiReviewSnapshot, Invoice, User } from '../types'
 import {
-    mockApi,
     mockUsers,
-    generateId,
     formatCurrency,
     getModelLabel,
     getReviewFlags,
 } from '../data/mockApi'
+import { AdminService } from '../services/adminService'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
 import ModelBadge from '../components/ModelBadge'
@@ -51,14 +50,10 @@ export default function AdminReview() {
     const [filter, setFilter] = useState('Needs action')
 
     const load = async () => {
-        const [advRes, invRes, aiRes] = await Promise.all([
-            mockApi.listAdvanceRequests(),
-            mockApi.listInvoices(),
-            mockApi.listAiSnapshots(),
-        ])
-        setAdvances(advRes.data)
-        setInvoices(invRes.data)
-        setAiSnapshots(aiRes.data)
+        const [advancesData, invoicesData, aiSnapshotsData] = await AdminService.getReviewData()
+        setAdvances(advancesData)
+        setInvoices(invoicesData)
+        setAiSnapshots(aiSnapshotsData)
     }
 
     useEffect(() => { load() }, [])
@@ -68,15 +63,14 @@ export default function AdminReview() {
         if (!adv) return
         const now = new Date().toISOString()
         const newStatus = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'PendingReview'
-        await mockApi.updateAdvanceRequest(id, { status: newStatus, updatedAt: now })
-        await mockApi.updateInvoice(adv.invoiceId, { status: newStatus === 'Approved' ? 'Approved' : newStatus === 'Rejected' ? 'Rejected' : 'PendingReview' })
-        await mockApi.addAdminReview({
-            id: generateId('review'),
+        
+        await AdminService.updateAdvance(id, { status: newStatus, updatedAt: now })
+        await AdminService.updateInvoice(adv.invoiceId, { status: newStatus === 'Approved' ? 'Approved' : newStatus === 'Rejected' ? 'Rejected' : 'PendingReview' })
+        await AdminService.addReview({
             advanceRequestId: id,
             reviewerUserId: currentUser.id,
             decision,
             notes: decision === 'RequestMoreInfo' ? 'Additional evidence requested.' : 'Manual review completed.',
-            createdAt: now,
         })
         await load()
         navigate('/admin')

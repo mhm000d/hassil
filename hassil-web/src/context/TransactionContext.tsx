@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Transaction } from '../types'
 import { TransactionService } from '../services'
 
@@ -7,13 +7,15 @@ interface TransactionContextValue {
     loading: boolean
     error: string | null
     refetch: () => Promise<void>
+    create: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<Transaction>
 }
 
 export const TransactionContext = createContext<TransactionContextValue>({
     transactions: [],
     loading: true,
     error: null,
-    refetch: async () => {}
+    refetch: async () => {},
+    create: async (tx: any) => tx as Transaction,
 })
 
 export function TransactionProvider({ children }: { children: ReactNode }) {
@@ -38,8 +40,14 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
         fetchTransactions()
     }, [fetchTransactions])
 
+    const create = async (tx: Omit<Transaction, 'id' | 'createdAt'>) => {
+        const res = await TransactionService.create(tx)
+        await fetchTransactions()
+        return res
+    }
+
     return (
-        <TransactionContext.Provider value={{ transactions, loading, error, refetch: fetchTransactions }}>
+        <TransactionContext.Provider value={{ transactions, loading, error, refetch: fetchTransactions, create }}>
             {children}
         </TransactionContext.Provider>
     )

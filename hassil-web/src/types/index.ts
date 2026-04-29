@@ -67,6 +67,8 @@ export interface User {
     accountType: AccountType;
     role: UserRole;
     email: string;
+    name?: string;
+    displayName?: string;
     phone?: string;
     country?: string;
     trustScore: number;

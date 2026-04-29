@@ -1,4 +1,4 @@
-import type { AuthUser } from '../context/AuthContext'
+import type { User } from '../types'
 import { api } from './apiClient'
 
 const TOKEN_KEY = 'hassil_tokens'
@@ -40,8 +40,8 @@ export const AuthService = {
         return await api.del('/auth/logout', { authRequired: false })
     },
 
-    me: async (): Promise<AuthUser> => {
-        return await api.get<AuthUser>('/auth/me')
+    me: async (): Promise<User> => {
+        return await api.get<User>('/auth/me')
     },
 
     completeProfile: async (payload: { email: string, displayName: string }): Promise<void> => {

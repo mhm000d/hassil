@@ -1,13 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import { AuthService, getStoredTokens, updateAuthTokens } from '../services'
-import type { Tokens } from '../services'
-
-export interface AuthUser {
-    name: string
-    displayName: string
-    email: string
-    accountType: 'Freelancer' | 'SmallBusiness' | 'Admin'
-}
+import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { AuthService, getStoredTokens, updateAuthTokens, type Tokens } from '../services'
+import type { User } from '../types'
 
 export const AuthStatus = {
     LOGGED_OUT: 'LOGGED_OUT',
@@ -19,7 +12,7 @@ export const AuthStatus = {
 export type AuthStatus = typeof AuthStatus[keyof typeof AuthStatus]
 
 interface AuthContextValue {
-    user: AuthUser | null
+    user: User | null
     authStatus: AuthStatus
     isInitialized: boolean
     error: string | null
@@ -43,12 +36,12 @@ export const AuthContext = createContext<AuthContextValue>({
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<AuthUser | null>(null)
+    const [user, setUser] = useState<User | null>(null)
     const [authStatus, setAuthStatus] = useState<AuthStatus>(AuthStatus.LOGGED_OUT)
     const [isInitialized, setIsInitialized] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    function updateState(type: 'login' | 'signup' | 'logout' | 'me', value?: Tokens | AuthUser) {
+    function updateState(type: 'login' | 'signup' | 'logout' | 'me', value?: Tokens | User) {
         switch (type) {
             case 'login':
             case 'signup':
@@ -61,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setAuthStatus(AuthStatus.LOGGED_OUT)
                 break
             case 'me':
-                setUser(value as AuthUser)
+                setUser(value as User)
                 setAuthStatus(AuthStatus.ACTIVE)
                 break
         }

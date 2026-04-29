@@ -2,15 +2,16 @@ import type { AdvanceRequest } from '../types'
 import { api } from './apiClient'
 
 export const AdvanceService = {
-    list: async (): Promise<AdvanceRequest[]> => {
+    list: async () => {
         return await api.get<AdvanceRequest[]>('/advances')
     },
-
-    getById: async (id: string): Promise<AdvanceRequest> => {
+    get: async (id: string) => {
         return await api.get<AdvanceRequest>(`/advances/${id}`)
     },
-
-    create: async (advance: AdvanceRequest): Promise<AdvanceRequest> => {
+    create: async (advance: AdvanceRequest) => {
         return await api.post<AdvanceRequest>('/advances', advance)
+    },
+    update: async (id: string, patch: Partial<AdvanceRequest>) => {
+        return await api.patch<AdvanceRequest>(`/advances/${id}`, patch)
     }
 }

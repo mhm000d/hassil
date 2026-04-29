@@ -1,16 +1,17 @@
-import type { Invoice } from '../types'
 import { api } from './apiClient'
+import type { Invoice } from '../types'
 
 export const InvoiceService = {
-    list: async (): Promise<Invoice[]> => {
+    list: async () => {
         return await api.get<Invoice[]>('/invoices')
     },
-
-    getById: async (id: string): Promise<Invoice> => {
+    get: async (id: string) => {
         return await api.get<Invoice>(`/invoices/${id}`)
     },
-
-    create: async (invoice: Invoice): Promise<Invoice> => {
+    create: async (invoice: Invoice) => {
         return await api.post<Invoice>('/invoices', invoice)
+    },
+    update: async (id: string, patch: Partial<Invoice>) => {
+        return await api.patch<Invoice>(`/invoices/${id}`, patch)
     }
 }

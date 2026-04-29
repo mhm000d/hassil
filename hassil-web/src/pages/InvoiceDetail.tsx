@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { Invoice, User } from '../types'
-import { mockApi, mockUsers, generateId, formatCurrency, formatDate, calculateQuote } from '../data/mockApi'
+import type { Invoice } from '../types'
+import { mockUsers, generateId, formatCurrency, formatDate, calculateQuote } from '../data/mockApi'
+import { useAuth, useInvoices } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
 import ModelBadge from '../components/ModelBadge'
@@ -9,8 +10,6 @@ import DetailGrid from '../components/DetailGrid'
 import DisclosurePanel from '../components/DisclosurePanel'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Icon from '../components/Icon'
-
-const currentUser: User = mockUsers[0]
 
 function VerificationChecklist({ invoice, quote }: { invoice: Invoice; quote: ReturnType<typeof calculateQuote> }) {
     const checks = [
@@ -39,11 +38,14 @@ function VerificationChecklist({ invoice, quote }: { invoice: Invoice; quote: Re
 export default function InvoiceDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+    const { user: currentUser } = useAuth()
+    const { get: getInvoice, update: updateInvoice } = useInvoices()
     const [invoice, setInvoice] = useState<Invoice | null>(null)
+    const user = currentUser || mockUsers[0]
 
     useEffect(() => {
-        if (id) mockApi.getInvoice(id).then((res) => setInvoice(res.data ?? null))
-    }, [id])
+        if (id) getInvoice(id).then((res) => setInvoice(res ?? null))
+    }, [id, getInvoice])
 
     const addDocument = async () => {
         if (!invoice) return
@@ -55,7 +57,7 @@ export default function InvoiceDetail() {
             uploadedAt: new Date().toISOString(),
         }
         const updated = { ...invoice, documents: [...invoice.documents, doc] }
-        await mockApi.updateInvoice(invoice.id, { documents: updated.documents })
+        await updateInvoice(invoice.id, { documents: updated.documents })
         setInvoice(updated)
     }
 
@@ -69,7 +71,7 @@ export default function InvoiceDetail() {
         )
     }
 
-    const quote = calculateQuote(currentUser, invoice)
+    const quote = calculateQuote(user, invoice)
 
     return (
         <>

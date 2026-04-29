@@ -21,24 +21,26 @@ export interface ApiResponse<T> {
 
 export const mockUsers: User[] = [
     {
-        id: 'user-ahmed',
+        id: 'u-ahmed',
         accountType: 'SmallBusiness',
         role: 'User',
-        email: 'finance@ahmedstudio.co',
+        email: 'employer@example.com',
+        name: 'Amin Talahmeh',
+        displayName: 'Afyia',
         phone: '+971 50 000 1111',
         country: 'UAE',
         trustScore: 60,
         status: 'Active',
         createdAt: '2026-01-10T00:00:00Z',
         smallBusinessProfile: {
-            businessName: 'Ahmed Studio',
+            businessName: 'Afyia',
             registrationNumber: 'AE-DEMO-2026',
-            businessBankAccountName: 'Ahmed Studio LLC',
+            businessBankAccountName: 'Amin Talahmeh',
             businessBankAccountLast4: '4421',
         },
     },
     {
-        id: 'user-sara',
+        id: 'u-sara',
         accountType: 'Freelancer',
         role: 'User',
         email: 'sara@saradesigns.io',
@@ -54,7 +56,7 @@ export const mockUsers: User[] = [
         },
     },
     {
-        id: 'user-mona',
+        id: 'u-mona',
         accountType: 'Freelancer',
         role: 'User',
         email: 'mona.ux@example.com',
@@ -70,7 +72,7 @@ export const mockUsers: User[] = [
         },
     },
     {
-        id: 'user-admin',
+        id: 'u-admin',
         accountType: 'SmallBusiness',
         role: 'Admin',
         email: 'admin@hassil.io',
@@ -93,7 +95,7 @@ export const mockClients: Client[] = [
 export const mockInvoices: Invoice[] = [
     {
         id: 'inv-001',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         clientId: 'client-noura',
         client: mockClients[0],
         invoiceNumber: 'AHM-2026-018',
@@ -112,7 +114,7 @@ export const mockInvoices: Invoice[] = [
     },
     {
         id: 'inv-002',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         clientId: 'client-nabd',
         client: mockClients[1],
         invoiceNumber: 'AHM-2026-019',
@@ -139,7 +141,7 @@ export const mockInvoices: Invoice[] = [
     },
     {
         id: 'inv-003',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         clientId: 'client-noura',
         client: mockClients[0],
         invoiceNumber: 'SAR-2026-028',
@@ -157,7 +159,7 @@ export const mockInvoices: Invoice[] = [
     },
     {
         id: 'inv-004',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         clientId: 'client-noura',
         client: mockClients[0],
         invoiceNumber: 'AHM-2026-020',
@@ -176,7 +178,7 @@ export const mockInvoices: Invoice[] = [
     },
     {
         id: 'inv-005',
-        userId: 'user-mona',
+        userId: mockUsers[2].id,
         clientId: 'client-lynx',
         client: mockClients[2],
         invoiceNumber: 'MON-2026-011',
@@ -195,7 +197,7 @@ export const mockInvoices: Invoice[] = [
     },
     {
         id: 'inv-006',
-        userId: 'user-sara',
+        userId: mockUsers[1].id,
         clientId: 'client-nabd',
         client: mockClients[1],
         invoiceNumber: 'SAR-2026-028',
@@ -214,7 +216,7 @@ export const mockInvoices: Invoice[] = [
     },
     {
         id: 'inv-007',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         clientId: 'client-noura',
         client: mockClients[0],
         invoiceNumber: 'AHM-2026-016',
@@ -237,7 +239,7 @@ export const mockAdvanceRequests: AdvanceRequest[] = [
     {
         id: 'adv-001',
         invoiceId: 'inv-001',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         financingModel: 'InvoiceFactoring',
         repaymentParty: 'Client',
         clientNotificationRequired: true,
@@ -257,7 +259,7 @@ export const mockAdvanceRequests: AdvanceRequest[] = [
     {
         id: 'adv-002',
         invoiceId: 'inv-002',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         financingModel: 'InvoiceFactoring',
         repaymentParty: 'Client',
         clientNotificationRequired: true,
@@ -277,7 +279,7 @@ export const mockAdvanceRequests: AdvanceRequest[] = [
     {
         id: 'adv-003',
         invoiceId: 'inv-004',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         financingModel: 'InvoiceFactoring',
         repaymentParty: 'Client',
         clientNotificationRequired: true,
@@ -297,7 +299,7 @@ export const mockAdvanceRequests: AdvanceRequest[] = [
     {
         id: 'adv-004',
         invoiceId: 'inv-005',
-        userId: 'user-mona',
+        userId: mockUsers[2].id,
         financingModel: 'InvoiceDiscounting',
         repaymentParty: 'User',
         clientNotificationRequired: false,
@@ -317,7 +319,7 @@ export const mockAdvanceRequests: AdvanceRequest[] = [
     {
         id: 'adv-005',
         invoiceId: 'inv-006',
-        userId: 'user-sara',
+        userId: mockUsers[1].id,
         financingModel: 'InvoiceDiscounting',
         repaymentParty: 'User',
         clientNotificationRequired: false,
@@ -337,7 +339,7 @@ export const mockAdvanceRequests: AdvanceRequest[] = [
     {
         id: 'adv-006',
         invoiceId: 'inv-007',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         financingModel: 'InvoiceFactoring',
         repaymentParty: 'Client',
         clientNotificationRequired: true,
@@ -360,7 +362,7 @@ export const mockAdvanceRequests: AdvanceRequest[] = [
 export const mockTransactions: Transaction[] = [
     {
         id: 'tx-001',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         invoiceId: 'inv-001',
         advanceRequestId: 'adv-001',
         type: 'AdvanceDisbursement',
@@ -371,7 +373,7 @@ export const mockTransactions: Transaction[] = [
     },
     {
         id: 'tx-002',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         invoiceId: 'inv-004',
         advanceRequestId: 'adv-003',
         type: 'ClientPaymentToHassil',
@@ -382,7 +384,7 @@ export const mockTransactions: Transaction[] = [
     },
     {
         id: 'tx-003',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         invoiceId: 'inv-004',
         advanceRequestId: 'adv-003',
         type: 'BufferRelease',
@@ -393,7 +395,7 @@ export const mockTransactions: Transaction[] = [
     },
     {
         id: 'tx-004',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         invoiceId: 'inv-004',
         advanceRequestId: 'adv-003',
         type: 'PlatformFee',
@@ -404,7 +406,7 @@ export const mockTransactions: Transaction[] = [
     },
     {
         id: 'tx-005',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         type: 'TrustScoreAdjustment',
         direction: 'Internal',
         amount: 10,
@@ -413,7 +415,7 @@ export const mockTransactions: Transaction[] = [
     },
     {
         id: 'tx-006',
-        userId: 'user-mona',
+        userId: mockUsers[2].id,
         invoiceId: 'inv-005',
         advanceRequestId: 'adv-004',
         type: 'AdvanceDisbursement',
@@ -427,7 +429,7 @@ export const mockTransactions: Transaction[] = [
 export const mockTrustScoreEvents: TrustScoreEvent[] = [
     {
         id: 'score-001',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         oldScore: 50,
         newScore: 60,
         reason: 'Completed factoring cycle and buffer release.',
@@ -435,7 +437,7 @@ export const mockTrustScoreEvents: TrustScoreEvent[] = [
     },
     {
         id: 'score-002',
-        userId: 'user-ahmed',
+        userId: mockUsers[0].id,
         oldScore: 45,
         newScore: 50,
         reason: 'Repaid discounting advance after client payment detection.',
@@ -484,14 +486,65 @@ export const mockAiSnapshots: AiReviewSnapshot[] = [
 
 export const mockAdminReviews: AdminReview[] = []
 
-// ─── In-memory state ──────────────────────────────────────────────────────────
+let _invoices: Invoice[] = []
+let _advances: AdvanceRequest[] = []
+let _transactions: Transaction[] = []
+let _trustEvents: TrustScoreEvent[] = []
+let _aiSnapshots: AiReviewSnapshot[] = []
+let _adminReviews: AdminReview[] = []
 
-let _invoices = [...mockInvoices]
-let _advances = [...mockAdvanceRequests]
-let _transactions = [...mockTransactions]
-let _trustEvents = [...mockTrustScoreEvents]
-let _aiSnapshots = [...mockAiSnapshots]
-let _adminReviews = [...mockAdminReviews]
+const STATE_KEY = 'hassil_mock_state'
+
+function saveState() {
+    localStorage.setItem(STATE_KEY, JSON.stringify({
+        invoices: _invoices,
+        advances: _advances,
+        transactions: _transactions,
+        trustEvents: _trustEvents,
+        aiSnapshots: _aiSnapshots,
+        adminReviews: _adminReviews
+    }))
+}
+
+function loadState() {
+    try {
+        const saved = localStorage.getItem(STATE_KEY)
+        if (saved) {
+            const data = JSON.parse(saved)
+            
+            // Helper to merge lists by ID, prioritizing saved data but keeping seed data
+            const merge = <T extends { id: string }>(seeds: T[], saveds: T[]): T[] => {
+                const map = new Map<string, T>()
+                seeds.forEach(s => map.set(s.id, s))
+                saveds.forEach(s => map.set(s.id, s))
+                return Array.from(map.values())
+            }
+
+            _invoices = merge(mockInvoices, data.invoices || [])
+            _advances = merge(mockAdvanceRequests, data.advances || [])
+            _transactions = merge(mockTransactions, data.transactions || [])
+            _trustEvents = merge(mockTrustScoreEvents, data.trustEvents || [])
+            _aiSnapshots = data.aiSnapshots || []
+            _adminReviews = data.adminReviews || []
+        } else {
+            // First time: Initialize with seed data
+            _invoices = [...mockInvoices]
+            _advances = [...mockAdvanceRequests]
+            _transactions = [...mockTransactions]
+            _trustEvents = [...mockTrustScoreEvents]
+            _aiSnapshots = [...mockAiSnapshots]
+            _adminReviews = [...mockAdminReviews]
+            saveState()
+        }
+    } catch (e) {
+        console.error('Failed to load state', e)
+        _invoices = [...mockInvoices]
+        _advances = [...mockAdvanceRequests]
+    }
+}
+
+// Initial load
+loadState()
 
 function ok<T>(data: T): ApiResponse<T> {
     return { data, status: 'success' }
@@ -518,10 +571,12 @@ export const mockApi = {
     },
     createInvoice(invoice: Invoice): Promise<ApiResponse<Invoice>> {
         _invoices = [invoice, ..._invoices]
+        saveState()
         return Promise.resolve(ok(invoice))
     },
     updateInvoice(id: string, patch: Partial<Invoice>): Promise<ApiResponse<Invoice | undefined>> {
         _invoices = _invoices.map((inv) => (inv.id === id ? { ...inv, ...patch } : inv))
+        saveState()
         return Promise.resolve(ok(_invoices.find((inv) => inv.id === id)))
     },
 
@@ -535,10 +590,12 @@ export const mockApi = {
     },
     createAdvanceRequest(advance: AdvanceRequest): Promise<ApiResponse<AdvanceRequest>> {
         _advances = [advance, ..._advances]
+        saveState()
         return Promise.resolve(ok(advance))
     },
     updateAdvanceRequest(id: string, patch: Partial<AdvanceRequest>): Promise<ApiResponse<AdvanceRequest | undefined>> {
         _advances = _advances.map((adv) => (adv.id === id ? { ...adv, ...patch } : adv))
+        saveState()
         return Promise.resolve(ok(_advances.find((adv) => adv.id === id)))
     },
 
@@ -549,6 +606,7 @@ export const mockApi = {
     },
     addTransaction(tx: Transaction): Promise<ApiResponse<Transaction>> {
         _transactions = [tx, ..._transactions]
+        saveState()
         return Promise.resolve(ok(tx))
     },
 
@@ -607,6 +665,29 @@ export const mockApi = {
     getPendingConfirmationToken(): string | null {
         return _invoices.find((inv) => inv.clientConfirmation?.status === 'Pending')?.clientConfirmation?.token ?? null
     },
+
+    getDashboardSummary(userId: string): Promise<ApiResponse<any>> {
+        const userInvoices = _invoices.filter(i => i.userId === userId)
+        const userAdvances = _advances.filter(a => a.userId === userId)
+        
+        const openInvoices = userInvoices.filter(inv => inv.status !== 'Paid' && inv.status !== 'Rejected')
+        const activeAdvances = userAdvances.filter(adv => !['Repaid', 'Rejected'].includes(adv.status))
+        
+        const summary = {
+            totalOutstanding: openInvoices.reduce((sum, inv) => sum + inv.amount, 0),
+            pendingAdvanceAmount: activeAdvances.reduce((sum, adv) => sum + adv.advanceAmount, 0),
+            availableToAdvance: openInvoices
+                .filter(inv => !inv.advanceRequestId)
+                .reduce((sum, inv) => {
+                    const user = mockUsers.find(u => u.id === userId) || mockUsers[0]
+                    return sum + calculateQuote(user, inv).advanceAmount
+                }, 0),
+            invoiceCount: userInvoices.length,
+            activeAdvanceCount: activeAdvances.length
+        }
+        
+        return Promise.resolve(ok(summary))
+    }
 }
 
 // ─── Auth helpers (localStorage-backed) ──────────────────────────────────────
@@ -614,6 +695,7 @@ export const mockApi = {
 const USERS_KEY = 'hassil_registered_users'
 
 interface RegisteredUser {
+    id: string
     email: string
     passwordHash: string // stored as plain text for demo purposes
     name: string
@@ -633,31 +715,149 @@ function saveRegisteredUsers(users: RegisteredUser[]) {
     localStorage.setItem(USERS_KEY, JSON.stringify(users))
 }
 
+function seedDataForUser(userId: string) {
+    // 1. A past paid invoice to show history
+    const pastInvoice: Invoice = {
+        id: generateId('inv'),
+        userId,
+        clientId: mockClients[0].id,
+        client: mockClients[0],
+        invoiceNumber: `PAST-${Math.floor(Math.random() * 1000)}`,
+        receivableSource: 'DirectClientInvoice',
+        amount: 8500,
+        currency: 'USD',
+        issueDate: '2026-03-01',
+        dueDate: '2026-04-01',
+        description: 'Completed consulting services',
+        paymentTerms: 'Net 30',
+        status: 'Paid',
+        fingerprint: generateId('fp'),
+        createdAt: '2026-03-01T09:00:00Z',
+        documents: [],
+    }
+    
+    // 2. A new open invoice to show in the list and allow advances
+    const openInvoice: Invoice = {
+        id: generateId('inv'),
+        userId,
+        clientId: mockClients[1].id,
+        client: mockClients[1],
+        invoiceNumber: `OPEN-${Math.floor(Math.random() * 1000)}`,
+        receivableSource: 'DirectClientInvoice',
+        amount: 15000,
+        currency: 'USD',
+        issueDate: '2026-04-15',
+        dueDate: '2026-05-30',
+        description: 'Ongoing development work',
+        paymentTerms: 'Net 45',
+        status: 'Submitted',
+        fingerprint: generateId('fp'),
+        createdAt: '2026-04-15T10:00:00Z',
+        documents: [],
+    }
+
+    _invoices.push(pastInvoice, openInvoice)
+
+    // 3. A transaction for the past invoice
+    _transactions.push({
+        id: generateId('tx'),
+        userId,
+        invoiceId: pastInvoice.id,
+        type: 'BufferRelease',
+        direction: 'Credit',
+        amount: 1700,
+        description: 'Settlement from completed project',
+        createdAt: '2026-04-02T14:00:00Z',
+    })
+
+    // 4. A trust score adjustment to show score history
+    _transactions.push({
+        id: generateId('tx'),
+        userId,
+        type: 'TrustScoreAdjustment',
+        direction: 'Internal',
+        amount: 5,
+        description: 'Initial profile verification bonus',
+        createdAt: '2026-04-01T08:00:00Z',
+    })
+
+    saveState()
+}
+
 export const authApi = {
-    register(user: RegisteredUser): { success: boolean; error?: string } {
+    register(userData: Omit<RegisteredUser, 'id'>): { success: boolean; user?: RegisteredUser; error?: string } {
         const users = loadRegisteredUsers()
-        if (users.find((u) => u.email.toLowerCase() === user.email.toLowerCase())) {
+        if (users.find((u) => u.email.toLowerCase() === userData.email.toLowerCase())) {
             return { success: false, error: 'An account with this email already exists.' }
         }
-        saveRegisteredUsers([...users, user])
-        return { success: true }
+        const newUser = { ...userData, id: generateId('u') }
+        saveRegisteredUsers([...users, newUser])
+        
+        // Seed some mock data for the new account so the dashboard isn't empty
+        seedDataForUser(newUser.id)
+        
+        return { success: true, user: newUser }
     },
 
-    login(email: string, password: string): { success: boolean; user?: RegisteredUser; error?: string } {
+    login(email: string, password: string): { success: boolean; user?: RegisteredUser | User; error?: string } {
         const users = loadRegisteredUsers()
-        const found = users.find(
+        const foundReg = users.find(
             (u) => u.email.toLowerCase() === email.toLowerCase() && u.passwordHash === password,
         )
-        if (!found) {
-            return { success: false, error: 'Invalid email or password.' }
+        if (foundReg) {
+            return { success: true, user: foundReg }
         }
-        return { success: true, user: found }
+
+        const foundSeed = mockUsers.find(
+            (u) => u.email.toLowerCase() === email.toLowerCase() && password === '123456' // Default password for seeds
+        )
+        if (foundSeed) {
+            return { success: true, user: foundSeed }
+        }
+
+        return { success: false, error: 'Invalid email or password.' }
     },
 
-    updateDisplayName(email: string, displayName: string): void {
+    me(userId: string): User | undefined {
+        // Try to find in registered users (localStorage)
+        const users = loadRegisteredUsers()
+        const regUser = users.find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase())
+        
+        // Try to find in seed data
+        const seedUser = mockUsers.find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase())
+
+        if (!regUser && !seedUser) return undefined
+
+        // Merge or return
+        if (regUser) {
+            const finalId = seedUser?.id || regUser.id || regUser.email
+            return {
+                id: finalId,
+                email: regUser.email,
+                name: regUser.name,
+                displayName: regUser.displayName,
+                accountType: regUser.accountType,
+                role: seedUser?.role || 'User',
+                trustScore: seedUser?.trustScore || 40,
+                status: seedUser?.status || 'Active',
+                createdAt: seedUser?.createdAt || new Date().toISOString(),
+                smallBusinessProfile: seedUser?.smallBusinessProfile || (regUser.accountType === 'SmallBusiness' ? {
+                    businessName: regUser.displayName,
+                    registrationNumber: 'PENDING',
+                } : undefined),
+                freelancerProfile: seedUser?.freelancerProfile || (regUser.accountType === 'Freelancer' ? {
+                    fullName: regUser.name,
+                } : undefined)
+            }
+        }
+
+        return seedUser
+    },
+
+    completeProfile(payload: { email: string; displayName: string }): void {
         const users = loadRegisteredUsers()
         saveRegisteredUsers(users.map((u) =>
-            u.email.toLowerCase() === email.toLowerCase() ? { ...u, displayName } : u,
+            u.email.toLowerCase() === payload.email.toLowerCase() ? { ...u, displayName: payload.displayName } : u,
         ))
     },
 }

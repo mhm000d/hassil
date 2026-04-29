@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { ConfirmationStatus, Invoice } from '../types'
-import { mockApi, formatCurrency, formatDate, formatDateTime } from '../data/mockApi'
+import { formatCurrency, formatDate, formatDateTime } from '../data/mockApi'
+import { PublicService } from '../services/publicService'
+import { useInvoices } from '../hooks'
 import DetailGrid from '../components/DetailGrid'
 import Logo from '../components/Logo'
 import Icon from '../components/Icon'
@@ -9,26 +11,29 @@ import Icon from '../components/Icon'
 export default function ClientConfirmation() {
     const { token } = useParams<{ token: string }>()
     const navigate = useNavigate()
+    const { update: updateInvoice } = useInvoices()
     const [invoice, setInvoice] = useState<Invoice | null>(null)
     const [note, setNote] = useState('Work received and invoice details are correct.')
     const [done, setDone] = useState(false)
 
     useEffect(() => {
         if (token) {
-            mockApi.getClientConfirmation(token).then((res) => {
-                if (res.data) setInvoice(res.data.invoice)
+            PublicService.getClientConfirmation(token).then((res) => {
+                if (res) setInvoice(res.invoice)
             })
         }
     }, [token])
 
     const respond = async (status: ConfirmationStatus) => {
         if (!token) return
-        await mockApi.updateClientConfirmation(token, {
+        await PublicService.updateClientConfirmation(token, {
             status,
             clientNote: note,
             respondedAt: new Date().toISOString(),
         })
-        await mockApi.updateInvoice(invoice!.id, { status: status === 'Confirmed' ? 'Confirmed' : 'Disputed' })
+        if (invoice) {
+            await updateInvoice(invoice.id, { status: status === 'Confirmed' ? 'Confirmed' : 'Disputed' })
+        }
         setDone(true)
     }
 

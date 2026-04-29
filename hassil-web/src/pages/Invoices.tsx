@@ -1,22 +1,14 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Invoice, User } from '../types'
-import { mockApi, formatCurrency, formatDate } from '../data/mockApi'
-import { mockUsers } from '../data/mockApi'
+import { formatCurrency, formatDate } from '../data/mockApi'
+import { useInvoices } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
 import Table from '../components/Table'
 import Icon from '../components/Icon'
 
-const currentUser: User = mockUsers[0]
-
 export default function Invoices() {
     const navigate = useNavigate()
-    const [invoices, setInvoices] = useState<Invoice[]>([])
-
-    useEffect(() => {
-        mockApi.listInvoices(currentUser.id).then((res) => setInvoices(res.data))
-    }, [])
+    const { invoices } = useInvoices()
 
     return (
         <>
