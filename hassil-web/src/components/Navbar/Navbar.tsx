@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Logo from '../Logo'
-import './Navbar.css'
+import '../../styles/Navbar.css'
 
 export default function Navbar() {
     const navigate = useNavigate()

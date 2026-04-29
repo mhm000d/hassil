@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authApi } from '../data/mockApi'
-import './FreelancerOnboarding.css'
+import '../styles/FreelancerOnboarding.css'
 
 export default function SmallBusinessOnboarding() {
     const navigate = useNavigate()

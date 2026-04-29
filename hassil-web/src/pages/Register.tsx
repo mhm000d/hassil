@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { authApi } from '../data/mockApi'
-import './FreelancerLogin.css'
+import '../styles/Login.css'
 
 export default function Register() {
     const navigate = useNavigate()

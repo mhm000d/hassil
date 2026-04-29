@@ -1,5 +1,5 @@
 import React from 'react'
-import './AnimatedBackground.css'
+import '../../../styles/AnimatedBackground.css'
 
 export default function AnimatedBackground() {
     return (

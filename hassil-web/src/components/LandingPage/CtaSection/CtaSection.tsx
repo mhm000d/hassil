@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import './CtaSection.css'
+import '../../../styles/CtaSection.css'
 
 export default function CtaSection() {
     const navigate = useNavigate()

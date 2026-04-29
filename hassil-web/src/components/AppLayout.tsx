@@ -71,7 +71,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </div>
                     <div className="header-context">
                         <strong>{pageTitle}</strong>
-                        <span>{currentUser.accountType === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'}</span>
+                        <span>{(authUser?.accountType ?? currentUser.accountType) === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'}</span>
                         <em>Verified profile</em>
                     </div>
                     <div className="top-actions header-actions">
@@ -91,7 +91,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <div className="rail-profile">
                     <div className="rail-avatar"><Icon name="check" /></div>
                     <div>
-                        <strong>{isAdminPath ? 'Admin Console' : (currentUser.smallBusinessProfile?.businessName ?? currentUser.freelancerProfile?.fullName ?? currentUser.email)}</strong>
+                        <strong>{isAdminPath ? 'Admin Console' : displayName}</strong>
                         <span>{isAdminPath ? 'System Administrator' : `Trust score ${currentUser.trustScore}`}</span>
                     </div>
                 </div>

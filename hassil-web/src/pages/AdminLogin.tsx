@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import './FreelancerLogin.css'
+import '../styles/Login.css'
 
 export default function AdminLogin() {
     const navigate = useNavigate()

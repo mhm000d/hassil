@@ -1,4 +1,4 @@
-import './WhyHassil.css'
+import '../../../styles/WhyHassil.css'
 import type { ReactNode } from 'react'
 
 interface Feature {

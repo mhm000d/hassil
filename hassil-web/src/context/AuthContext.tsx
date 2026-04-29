@@ -1,41 +1,48 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 
-interface AuthUser {
+export interface AuthUser {
     name: string          // contact person name (used for login)
     displayName: string   // company name for SMB, freelancer name for Freelancer
     email: string
-    accountType: 'Freelancer' | 'SmallBusiness'
+    accountType: 'Freelancer' | 'SmallBusiness' | 'Admin'
 }
 
 interface AuthContextValue {
     user: AuthUser | null
+    isInitialized: boolean
     login: (user: AuthUser) => void
     logout: () => void
 }
 
 const STORAGE_KEY = 'hassil_auth_user'
 
-function loadUser(): AuthUser | null {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        return raw ? (JSON.parse(raw) as AuthUser) : null
-    } catch {
-        return null
-    }
-}
-
 const AuthContext = createContext<AuthContextValue>({
     user: null,
+    isInitialized: false,
     login: () => {},
     logout: () => {},
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<AuthUser | null>(loadUser)
+    const [user, setUser] = useState<AuthUser | null>(null)
+    const [isInitialized, setIsInitialized] = useState(false)
 
-    const login = (user: AuthUser) => {
-        setUser(user)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY)
+            if (raw) {
+                setUser(JSON.parse(raw) as AuthUser)
+            }
+        } catch (error) {
+            console.error('Failed to parse stored user:', error)
+        } finally {
+            setIsInitialized(true)
+        }
+    }, [])
+
+    const login = (newUser: AuthUser) => {
+        setUser(newUser)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser))
     }
 
     const logout = () => {
@@ -44,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, login, logout }}>
+        <AuthContext.Provider value={{ user, isInitialized, login, logout }}>
             {children}
         </AuthContext.Provider>
     )
