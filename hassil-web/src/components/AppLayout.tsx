@@ -26,7 +26,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const navigate = useNavigate()
     const location = useLocation()
     const path = location.pathname
-    const { user: authUser } = useAuth()
+    const { user: authUser, logout } = useAuth()
 
     // Use logged-in user name if available, fall back to mock seed user
     const displayName = authUser?.name
@@ -119,7 +119,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                             <Icon name="ledger" /> Support trail
                         </button>
                     )}
-                    <button className="btn btn-secondary full-width" onClick={() => navigate('/')}>
+                    <button className="btn btn-secondary full-width" onClick={() => { logout(); navigate('/') }}>
                         <Icon name="open" /> Logout
                     </button>
                 </div>
