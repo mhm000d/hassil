@@ -1184,6 +1184,8 @@ Hassil.Api/
     Invoices/
       InvoiceRequests.cs
       InvoiceResponses.cs
+    Onboarding/
+      OnboardingRequests.cs
     Transactions/
       TransactionResponses.cs
     TrustScores/
@@ -1197,6 +1199,7 @@ Hassil.Api/
     ClientConfirmationsController.cs
     DashboardController.cs
     InvoicesController.cs
+    OnboardingController.cs
     TransactionsController.cs
     TrustScoresController.cs
     DemoController.cs
@@ -1267,6 +1270,9 @@ Hassil.Api/
     Notifications/
       IMockNotificationService.cs
       MockNotificationService.cs
+    Onboarding/
+      IOnboardingService.cs
+      OnboardingService.cs
     Transactions/
       ITransactionService.cs
       TransactionService.cs
@@ -1284,6 +1290,7 @@ Core services:
 | AdvanceCalculatorService | Calculates model-specific advance, fee, buffer, and repayment values. |
 | ReviewScoringService | Applies deterministic review rules and returns approval recommendation. |
 | AiReviewService | Produces a short admin-facing review summary and risk explanation. |
+| OnboardingService | Creates small business or freelancer users, attaches the correct profile, and returns an auth token. |
 | TrustScoreService | Updates trust score and writes trust score events. |
 | DashboardService | Builds current-user dashboard metrics from invoices, advances, trust score, and ledger activity. |
 | TransactionService | Returns current-user ledger transaction history. |

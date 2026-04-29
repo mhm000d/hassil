@@ -12,6 +12,15 @@ public static class ApiEndpoints
         public const string DemoLogin = $"{Base}/demo-login";
     }
 
+    // -- Onboarding Endpoints ------------------------------------------------
+    public static class Onboarding
+    {
+        private const string Base = $"{ApiBase}/onboarding";
+
+        public const string SmallBusiness = $"{Base}/small-business";
+        public const string Freelancer = $"{Base}/freelancer";
+    }
+
     // -- Demo Endpoints -------------------------------------------------------
     public static class Demo
     {

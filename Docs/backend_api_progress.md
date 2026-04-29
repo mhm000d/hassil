@@ -10,6 +10,8 @@ This document explains what the backend currently supports, how the existing end
   - [Demo Seed](#demo-seed)
   - [Demo Login](#demo-login)
   - [Current User](#current-user)
+  - [Create Small Business Onboarding](#create-small-business-onboarding)
+  - [Create Freelancer Onboarding](#create-freelancer-onboarding)
   - [Create Invoice](#create-invoice)
   - [List Current User Invoices](#list-current-user-invoices)
   - [Get Invoice Details](#get-invoice-details)
@@ -45,7 +47,7 @@ This document explains what the backend currently supports, how the existing end
 The backend currently covers the first working slice of the demo:
 
 ```text
-seed demo data -> demo login -> authorize requests -> create/list/submit invoices -> quote/create advances -> confirm factoring clients -> admin review -> simulate advances -> dashboard and transaction history
+onboard or seed demo data -> authorize requests -> create/list/submit invoices -> quote/create advances -> confirm factoring clients -> admin review -> simulate advances -> dashboard and transaction history
 ```
 
 The core MVP backend slices from the spec are now implemented. Remaining work is mostly frontend integration, richer demos, and production hardening.
@@ -59,7 +61,7 @@ The core MVP backend slices from the spec are now implemented. Remaining work is
 POST /api/demo/seed
 ```
 
-3. Log in:
+3. Log in, or create a user through onboarding:
 
 ```http
 POST /api/auth/demo-login
@@ -85,6 +87,8 @@ small_business
 freelancer
 admin
 ```
+
+Onboarding endpoints also return an `accessToken`, so frontend flows can authorize immediately after account creation.
 
 ## Implemented APIs
 
@@ -153,6 +157,65 @@ Returns the authenticated user from the bearer token.
 Requires authorization.
 
 Use this to verify that login and Swagger authorization are working.
+
+### Create Small Business Onboarding
+
+```http
+POST /api/onboarding/small-business
+```
+
+Creates a new small business user, attaches the small business profile, writes a `Profile completed` trust-score event, and returns an auth token.
+
+Example request:
+
+```json
+{
+  "email": "founder@nourastudio.co",
+  "businessName": "Noura Studio",
+  "registrationNumber": "EG-C-991100",
+  "phone": "+20 100 000 0000",
+  "country": "Egypt",
+  "businessBankAccountName": "Noura Studio LLC",
+  "businessBankAccountLast4": "4321"
+}
+```
+
+Returns the same response shape as demo login:
+
+```json
+{
+  "accessToken": "hassil-demo-v1...",
+  "expiresAt": "2026-04-30T18:00:00Z",
+  "user": {
+    "accountType": "SmallBusiness",
+    "trustScore": 45,
+    "smallBusinessProfile": {
+      "businessName": "Noura Studio"
+    }
+  }
+}
+```
+
+### Create Freelancer Onboarding
+
+```http
+POST /api/onboarding/freelancer
+```
+
+Creates a new freelancer user, attaches the freelancer profile, writes a `Profile completed` trust-score event, and returns an auth token.
+
+Example request:
+
+```json
+{
+  "email": "maya@designs.co",
+  "fullName": "Maya Designs",
+  "phone": "+20 111 000 0000",
+  "country": "Egypt",
+  "personalBankAccountName": "Maya Hassan",
+  "personalBankAccountLast4": "7788"
+}
+```
 
 ### Create Invoice
 
@@ -710,7 +773,7 @@ Each transaction includes:
 
 ```text
 1. POST /api/demo/seed
-2. POST /api/auth/demo-login
+2. POST /api/auth/demo-login or POST /api/onboarding/small-business
 3. Authorize Swagger with the returned accessToken
 4. GET /api/users/me
 5. POST /api/invoices
@@ -752,6 +815,11 @@ Common error codes so far:
 | `INVALID_DEMO_PERSONA` | The demo login persona is not supported. |
 | `DEMO_USER_NOT_FOUND` | Demo data has not been seeded, or the demo user is missing. |
 | `USER_NOT_FOUND` | The authenticated user no longer exists. |
+| `EMAIL_REQUIRED` | Onboarding was submitted without an email. |
+| `EMAIL_ALREADY_EXISTS` | A user with the submitted onboarding email already exists. |
+| `BUSINESS_NAME_REQUIRED` | Small business onboarding was submitted without a business name. |
+| `REGISTRATION_NUMBER_REQUIRED` | Small business onboarding was submitted without a registration number. |
+| `FULL_NAME_REQUIRED` | Freelancer onboarding was submitted without a full name. |
 | `INVALID_RECEIVABLE_SOURCE` | Invoice source is not `DirectClientInvoice` or `FreelancePlatformPayout`. |
 | `DUPLICATE_INVOICE` | An invoice with the same fingerprint already exists. |
 | `INVOICE_NOT_FOUND` | The invoice does not exist or does not belong to the current user. |
