@@ -1,4 +1,4 @@
-using Hassil.Api.Authentication;
+﻿using Hassil.Api.Authentication;
 using Hassil.Api.Database;
 using Hassil.Api.Middleware;
 using Hassil.Api.Services.Auth;

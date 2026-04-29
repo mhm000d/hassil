@@ -1,4 +1,4 @@
-using Hassil.Api.Authentication;
+﻿using Hassil.Api.Authentication;
 using Hassil.Api.Database;
 using Hassil.Api.Middleware;
 using Hassil.Api.Services.Auth;
@@ -7,7 +7,6 @@ using Hassil.Api.Services.Invoices;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
-using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,18 +31,11 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Enter only the access token returned by /api/auth/demo-login."
     });
 
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
+            new OpenApiSecuritySchemeReference("Bearer", document, externalResource: null),
+            []
         }
     });
 });
