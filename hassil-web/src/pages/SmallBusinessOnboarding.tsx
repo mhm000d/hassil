@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import './FreelancerOnboarding.css'
 
 export default function SmallBusinessOnboarding() {
     const navigate = useNavigate()
+    const { login } = useAuth()
     const [form, setForm] = useState({
         businessName: '',
         registrationNumber: '',
@@ -20,6 +22,7 @@ export default function SmallBusinessOnboarding() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
+        login({ name: form.businessName || 'Business', email: form.email, accountType: 'SmallBusiness' })
         navigate('/dashboard')
     }
 

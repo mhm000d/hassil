@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import Icon from './Icon'
 import Logo from './Logo'
 import { mockUsers, mockApi } from '../data/mockApi'
+import { useAuth } from '../context/AuthContext'
 
 interface AppLayoutProps {
     children?: ReactNode
@@ -25,6 +26,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const navigate = useNavigate()
     const location = useLocation()
     const path = location.pathname
+    const { user: authUser } = useAuth()
+
+    // Use logged-in user name if available, fall back to mock seed user
+    const displayName = authUser?.name
+        ?? mockUsers[0].smallBusinessProfile?.businessName
+        ?? mockUsers[0].freelancerProfile?.fullName
+        ?? mockUsers[0].email
 
     // Read synchronously from live in-memory state — always up to date
     const pendingToken = mockApi.getPendingConfirmationToken()
@@ -65,7 +73,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </div>
                     <div className="top-actions header-actions">
                         <button type="button" className="btn btn-ghost">
-                            {currentUser.smallBusinessProfile?.businessName ?? currentUser.freelancerProfile?.fullName ?? currentUser.email}
+                            {displayName}
                         </button>
                         {!isAdminPath && (
                             <button type="button" className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
