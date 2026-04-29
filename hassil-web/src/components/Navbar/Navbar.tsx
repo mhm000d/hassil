@@ -1,6 +1,6 @@
-import './Navbar.css'
-import Logo from '../Logo'
 import { useNavigate } from 'react-router-dom'
+import Logo from '../Logo'
+import './Navbar.css'
 
 export default function Navbar() {
     const navigate = useNavigate()
