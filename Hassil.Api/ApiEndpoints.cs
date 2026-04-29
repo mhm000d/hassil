@@ -27,4 +27,16 @@ public static class ApiEndpoints
 
         public const string Me = $"{Base}/me";
     }
+
+    // -- Invoice Endpoints ----------------------------------------------------
+    public static class Invoices
+    {
+        private const string Base = $"{ApiBase}/invoices";
+
+        public const string Create = Base;
+        public const string GetAll = Base;
+        public const string Get = $"{Base}/{{id:guid}}";
+        public const string AddDocument = $"{Base}/{{id:guid}}/documents";
+        public const string Submit = $"{Base}/{{id:guid}}/submit";
+    }
 }
