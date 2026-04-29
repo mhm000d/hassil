@@ -24,23 +24,25 @@ This document explains what the backend currently supports, how the existing end
   - [Simulate Freelancer User Repayment](#simulate-freelancer-user-repayment)
   - [Simulate Factoring Client Payment To Hassil](#simulate-factoring-client-payment-to-hassil)
   - [Simulate Factoring Buffer Release](#simulate-factoring-buffer-release)
+  - [Get Client Confirmation](#get-client-confirmation)
+  - [Confirm Client Confirmation](#confirm-client-confirmation)
+  - [Dispute Client Confirmation](#dispute-client-confirmation)
 - [Recommended Current Workflow](#recommended-current-workflow)
 - [Error Response Shape](#error-response-shape)
 - [Recommended Order For Remaining Features](#recommended-order-for-remaining-features)
-  - [1. Client Confirmation](#1-client-confirmation)
-  - [2. Admin Review](#2-admin-review)
-  - [3. Trust Score Events](#3-trust-score-events)
-  - [4. Dashboard And Transactions](#4-dashboard-and-transactions)
+  - [1. Admin Review](#1-admin-review)
+  - [2. Trust Score Events](#2-trust-score-events)
+  - [3. Dashboard And Transactions](#3-dashboard-and-transactions)
 
 ## Current Backend Scope
 
 The backend currently covers the first working slice of the demo:
 
 ```text
-seed demo data -> demo login -> authorize requests -> create/list/submit invoices -> quote/create/simulate advances
+seed demo data -> demo login -> authorize requests -> create/list/submit invoices -> quote/create advances -> confirm factoring clients -> simulate advances
 ```
 
-It does not yet include public client confirmation endpoints, admin review endpoints, trust-score event listing, dashboard summaries, or standalone transaction listing.
+It does not yet include admin review endpoints, trust-score event listing, dashboard summaries, or standalone transaction listing.
 
 ## How To Use Swagger Authorization
 
@@ -321,7 +323,8 @@ What it does:
 - Stores accepted terms.
 - Moves the invoice from `Submitted` to an advance-related status.
 - Auto-approves strong freelancer discounting requests.
-- Sends factoring requests to `PendingClientConfirmation` until client confirmation is implemented.
+- Generates a client confirmation token for factoring requests.
+- Sends factoring requests to `PendingClientConfirmation` until the client confirms or disputes.
 
 ### List Current User Advance Requests
 
@@ -417,6 +420,66 @@ ClientPaidHassil -> BufferReleased -> Repaid
 
 Also marks the invoice as `Paid`, records platform fee and buffer release transactions, and increases trust score.
 
+### Get Client Confirmation
+
+```http
+GET /api/client-confirmations/{token}
+```
+
+Public endpoint. It does not require bearer authorization.
+
+Returns the invoice and advance request linked to a client confirmation token.
+
+The token is generated when a small business factoring advance request is created.
+
+### Confirm Client Confirmation
+
+```http
+POST /api/client-confirmations/{token}/confirm
+```
+
+Public endpoint. It confirms the invoice and payment redirection.
+
+Example request:
+
+```json
+{
+  "note": "Work received and approved."
+}
+```
+
+What it does:
+
+- Moves the confirmation from `Pending` to `Confirmed`.
+- Moves the invoice from `PendingClientConfirmation` to review.
+- Moves the advance from `PendingClientConfirmation` to `PendingReview`.
+- Re-scores the request.
+- Auto-approves strong requests.
+- Increases trust score for client confirmation.
+
+### Dispute Client Confirmation
+
+```http
+POST /api/client-confirmations/{token}/dispute
+```
+
+Public endpoint. It lets the client dispute the invoice.
+
+Example request:
+
+```json
+{
+  "note": "The delivered work does not match the approved scope."
+}
+```
+
+What it does:
+
+- Moves the confirmation to `Disputed`.
+- Moves the invoice to `Disputed`.
+- Rejects the linked advance request.
+- Reduces trust score for the dispute.
+
 ## Recommended Current Workflow
 
 ```text
@@ -429,8 +492,10 @@ Also marks the invoice as `Paid`, records platform fee and buffer release transa
 7. POST /api/invoices/{id}/submit
 8. POST /api/advance-requests/quote
 9. POST /api/advance-requests
-10. GET /api/advance-requests
-11. GET /api/advance-requests/{id}
+10. For factoring: GET /api/client-confirmations/{token}
+11. For factoring: POST /api/client-confirmations/{token}/confirm
+12. GET /api/advance-requests
+13. GET /api/advance-requests/{id}
 ```
 
 ## Error Response Shape
@@ -462,28 +527,14 @@ Common error codes so far:
 | `ADVANCE_REQUEST_NOT_FOUND` | The advance request does not exist or does not belong to the current user. |
 | `INVALID_ADVANCE_TRANSITION` | The requested advance status transition is not allowed. |
 | `INVALID_FINANCING_MODEL` | A simulation was called for the wrong financing model. |
+| `CLIENT_CONFIRMATION_NOT_FOUND` | The client confirmation token was not found. |
+| `INVALID_CLIENT_CONFIRMATION_TRANSITION` | The confirmation cannot move to the requested state. |
 
 ## Recommended Order For Remaining Features
 
 Build one vertical slice at a time.
 
-### 1. Client Confirmation
-
-```http
-GET  /api/client-confirmations/{token}
-POST /api/client-confirmations/{token}/confirm
-POST /api/client-confirmations/{token}/dispute
-```
-
-Needed for small business factoring.
-
-Add:
-
-- `MockNotificationService`
-- confirmation token creation
-- public confirmation endpoints
-
-### 2. Admin Review
+### 1. Admin Review
 
 ```http
 GET  /api/admin/advance-requests/pending
@@ -503,7 +554,7 @@ Add:
 - `AdminReview` records
 - manual approve/reject flow
 
-### 3. Trust Score Events
+### 2. Trust Score Events
 
 ```http
 GET /api/trust-score/events
@@ -516,7 +567,7 @@ Add:
 - `TrustScoreService`
 - trust-score history endpoint
 
-### 4. Dashboard And Transactions
+### 3. Dashboard And Transactions
 
 ```http
 GET /api/dashboard/summary

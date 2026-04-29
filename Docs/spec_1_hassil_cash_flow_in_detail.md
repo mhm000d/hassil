@@ -1171,6 +1171,9 @@ Hassil.Api/
     Auth/
       AuthRequests.cs
       AuthResponses.cs
+    ClientConfirmations/
+      ClientConfirmationRequests.cs
+      ClientConfirmationResponses.cs
     Demo/
       DemoResponses.cs
     Invoices/
@@ -1181,6 +1184,7 @@ Hassil.Api/
   Controllers/
     AdvanceRequestsController.cs
     AuthController.cs
+    ClientConfirmationsController.cs
     InvoicesController.cs
     DemoController.cs
     UsersController.cs
@@ -1196,6 +1200,7 @@ Hassil.Api/
   Mappings/
     AdvanceRequestMappings.cs
     AuthMappings.cs
+    ClientConfirmationMappings.cs
     DemoMappings.cs
     InvoiceMappings.cs
     UserMappings.cs
@@ -1218,6 +1223,9 @@ Hassil.Api/
     Demo/
       DemoSeedService.cs
       IDemoSeedService.cs
+    ClientConfirmations/
+      ClientConfirmationService.cs
+      IClientConfirmationService.cs
     Invoices/
       IInvoiceFingerprintService.cs
       IInvoiceService.cs
@@ -1229,6 +1237,9 @@ Hassil.Api/
     OpenBanking/
       IOpenBankingGateway.cs
       MockOpenBankingGateway.cs
+    Notifications/
+      IMockNotificationService.cs
+      MockNotificationService.cs
 ```
 
 Core services:

@@ -55,4 +55,14 @@ public static class ApiEndpoints
         public const string SimulateClientPaymentToHassil = $"{Base}/{{id:guid}}/simulate-client-payment-to-hassil";
         public const string SimulateBufferRelease = $"{Base}/{{id:guid}}/simulate-buffer-release";
     }
+
+    // -- Client Confirmation Endpoints ---------------------------------------
+    public static class ClientConfirmations
+    {
+        private const string Base = $"{ApiBase}/client-confirmations";
+
+        public const string Get = $"{Base}/{{token}}";
+        public const string Confirm = $"{Base}/{{token}}/confirm";
+        public const string Dispute = $"{Base}/{{token}}/dispute";
+    }
 }

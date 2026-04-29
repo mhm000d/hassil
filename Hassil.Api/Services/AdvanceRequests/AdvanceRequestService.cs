@@ -4,6 +4,7 @@ using Hassil.Api.Domain.Enums;
 using Hassil.Api.Domain.Models;
 using Hassil.Api.Exceptions;
 using Hassil.Api.Services.Ledger;
+using Hassil.Api.Services.Notifications;
 using Hassil.Api.Services.OpenBanking;
 using Microsoft.EntityFrameworkCore;
 using ValidationException = Hassil.Api.Exceptions.ValidationException;
@@ -15,6 +16,7 @@ public class AdvanceRequestService(
     IAdvanceCalculatorService calculator,
     IReviewScoringService reviewScoringService,
     ILedgerService ledgerService,
+    IMockNotificationService notificationService,
     IOpenBankingGateway openBankingGateway,
     ILogger<AdvanceRequestService> logger) : IAdvanceRequestService
 {
@@ -78,6 +80,13 @@ public class AdvanceRequestService(
         dbContext.AdvanceRequests.Add(advanceRequest);
         invoice.AttachAdvanceRequest(advanceRequest);
         invoice.MarkAdvanceRequested();
+
+        if (quote.FinancingModel == FinancingModel.InvoiceFactoring
+            && invoice.ClientConfirmation is null)
+        {
+            var confirmation = notificationService.CreateClientConfirmation(invoice);
+            invoice.AttachClientConfirmation(confirmation);
+        }
 
         ApplyInitialDecision(user, invoice, advanceRequest, quote, review);
 

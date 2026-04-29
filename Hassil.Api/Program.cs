@@ -3,9 +3,11 @@ using Hassil.Api.Database;
 using Hassil.Api.Middleware;
 using Hassil.Api.Services.Auth;
 using Hassil.Api.Services.AdvanceRequests;
+using Hassil.Api.Services.ClientConfirmations;
 using Hassil.Api.Services.Demo;
 using Hassil.Api.Services.Invoices;
 using Hassil.Api.Services.Ledger;
+using Hassil.Api.Services.Notifications;
 using Hassil.Api.Services.OpenBanking;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -56,8 +58,10 @@ builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IAdvanceCalculatorService, AdvanceCalculatorService>();
 builder.Services.AddScoped<IReviewScoringService, ReviewScoringService>();
 builder.Services.AddScoped<ILedgerService, LedgerService>();
+builder.Services.AddScoped<IMockNotificationService, MockNotificationService>();
 builder.Services.AddScoped<IOpenBankingGateway, MockOpenBankingGateway>();
 builder.Services.AddScoped<IAdvanceRequestService, AdvanceRequestService>();
+builder.Services.AddScoped<IClientConfirmationService, ClientConfirmationService>();
 
 var app = builder.Build();
 
