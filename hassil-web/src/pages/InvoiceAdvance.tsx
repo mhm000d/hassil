@@ -83,12 +83,12 @@ export default function InvoiceAdvance() {
             settlementBufferAmount: quote.settlementBufferAmount,
             expectedRepaymentAmount: quote.expectedRepaymentAmount,
             reviewScore: score,
-            approvalMode: score >= 75 ? 'Auto' : 'Manual',
-            status: score >= 75 ? 'Approved' : 'PendingReview',
+            approvalMode: 'Manual',
+            status: 'PendingReview',
             termsAcceptedAt: new Date().toISOString(),
         }
         await createAdvance(advance as AdvanceRequest)
-        await updateInvoice(invoice.id, { advanceRequestId: advanceId, status: advance.status === 'Approved' ? 'Approved' : 'PendingReview' })
+        await updateInvoice(invoice.id, { advanceRequestId: advanceId, status: 'PendingReview' })
         navigate(`/advances/${advanceId}`)
     }
 

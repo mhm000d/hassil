@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Invoice } from '../types'
-import { mockUsers, generateId, formatCurrency, formatDate, calculateQuote } from '../data/mockApi'
+import { mockUsers, formatCurrency, formatDate, calculateQuote } from '../data/mockApi'
 import { useAuth, useInvoices } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
@@ -39,34 +39,32 @@ export default function InvoiceDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { user: currentUser } = useAuth()
-    const { get: getInvoice, update: updateInvoice } = useInvoices()
+    const { get: getInvoice, addDocument: addInvoiceDocument } = useInvoices()
     const [invoice, setInvoice] = useState<Invoice | null>(null)
     const user = currentUser || mockUsers[0]
 
-    useEffect(() => {
-        if (id) getInvoice(id).then((res) => setInvoice(res ?? null))
-    }, [id, getInvoice])
+    const load = async () => {
+        if (id) {
+            const res = await getInvoice(id)
+            setInvoice(res ?? null)
+        }
+    }
+
+    useEffect(() => { load() }, [id, getInvoice])
 
     const addDocument = async () => {
         if (!invoice) return
-        const doc = {
-            id: generateId('doc'),
-            invoiceId: invoice.id,
+        await addInvoiceDocument(invoice.id, {
             fileName: 'additional-evidence.pdf',
             documentType: 'Supporting Evidence',
-            uploadedAt: new Date().toISOString(),
-        }
-        const updated = { ...invoice, documents: [...(invoice.documents || []), doc] }
-        await updateInvoice(invoice.id, { documents: updated.documents })
-        setInvoice(updated)
+        })
+        await load()
     }
 
     if (!invoice) {
         return (
             <div className="card">
-                <h2 className="card-title">Invoice not found</h2>
-                <p className="soft-text mt-8">The selected invoice does not exist.</p>
-                <button className="btn btn-primary mt-16" onClick={() => navigate('/invoices')}>Back to invoices</button>
+                <h2 className="card-title">Fetching Invoice Details...</h2>
             </div>
         )
     }
@@ -105,7 +103,7 @@ export default function InvoiceDetail() {
                         <div className="space-between">
                             <h3>Evidence ({(invoice.documents?.length ?? 0)} file{(invoice.documents?.length ?? 0) !== 1 ? 's' : ''})</h3>
                         </div>
-                        { (invoice.documents || []).map((doc) => (
+                        {(invoice.documents || []).map((doc) => (
                             <div key={doc.id} className="detail-item mt-8">
                                 <span>{doc.documentType}</span>
                                 <strong>{doc.fileName}</strong>

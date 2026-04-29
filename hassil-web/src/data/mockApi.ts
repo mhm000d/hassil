@@ -84,6 +84,20 @@ export const mockUsers: User[] = [
             registrationNumber: 'ADMIN-001',
         },
     },
+    {
+        id: 'u-easy-admin',
+        accountType: 'SmallBusiness',
+        role: 'Admin',
+        email: 'admin@hassil.io',
+        name: 'Easy Admin',
+        trustScore: 100,
+        status: 'Active',
+        createdAt: '2025-12-01T00:00:00Z',
+        smallBusinessProfile: {
+            businessName: 'Hassil Easy Admin',
+            registrationNumber: 'ADMIN-002',
+        },
+    },
 ]
 
 export const mockClients: Client[] = [
@@ -424,6 +438,26 @@ export const mockTransactions: Transaction[] = [
         description: '$2,560 sent to Mona bank account.',
         createdAt: '2026-04-07T10:00:00Z',
     },
+    {
+        id: 'tx-007',
+        userId: mockUsers[1].id,   // u-sara
+        invoiceId: 'inv-006',
+        advanceRequestId: 'adv-005',
+        type: 'AdvanceDisbursement',
+        direction: 'Credit',
+        amount: 2175,
+        description: '$2,175 sent to Sara Designs bank account.',
+        createdAt: '2026-04-09T11:00:00Z',
+    },
+    {
+        id: 'tx-008',
+        userId: mockUsers[1].id,   // u-sara
+        type: 'TrustScoreAdjustment',
+        direction: 'Internal',
+        amount: 2,
+        description: 'Account verification bonus.',
+        createdAt: '2026-02-16T08:00:00Z',
+    },
 ]
 
 export const mockTrustScoreEvents: TrustScoreEvent[] = [
@@ -442,6 +476,22 @@ export const mockTrustScoreEvents: TrustScoreEvent[] = [
         newScore: 50,
         reason: 'Repaid discounting advance after client payment detection.',
         createdAt: '2026-02-20T08:00:00Z',
+    },
+    {
+        id: 'score-003',
+        userId: mockUsers[1].id,   // u-sara
+        oldScore: 40,
+        newScore: 42,
+        reason: 'Account verified and first invoice submitted.',
+        createdAt: '2026-02-16T08:00:00Z',
+    },
+    {
+        id: 'score-004',
+        userId: mockUsers[2].id,   // u-mona
+        oldScore: 65,
+        newScore: 72,
+        reason: 'Advance disbursed successfully and on-time profile history.',
+        createdAt: '2026-04-07T10:05:00Z',
     },
 ]
 
@@ -511,7 +561,7 @@ function loadState() {
         const saved = localStorage.getItem(STATE_KEY)
         if (saved) {
             const data = JSON.parse(saved)
-            
+
             // Helper to merge lists by ID, prioritizing saved data but keeping seed data
             const merge = <T extends { id: string }>(seeds: T[], saveds: T[]): T[] => {
                 const map = new Map<string, T>()
@@ -612,7 +662,7 @@ export const mockApi = {
         const adv = _advances.find(a => a.id === id)
         if (!adv || adv.status !== 'Approved') throw new Error('Invalid state for disbursement')
         const now = new Date().toISOString()
-        
+
         await this.updateAdvanceRequest(id, { status: 'Disbursed', updatedAt: now })
         await this.updateInvoice(adv.invoiceId, { status: 'Disbursed' })
         await this.addTransaction({
@@ -770,10 +820,10 @@ export const mockApi = {
     getDashboardSummary(userId: string): Promise<ApiResponse<any>> {
         const userInvoices = _invoices.filter(i => i.userId === userId)
         const userAdvances = _advances.filter(a => a.userId === userId)
-        
+
         const openInvoices = userInvoices.filter(inv => inv.status !== 'Paid' && inv.status !== 'Rejected')
         const activeAdvances = userAdvances.filter(adv => !['Repaid', 'Rejected'].includes(adv.status))
-        
+
         const summary = {
             totalOutstanding: openInvoices.reduce((sum, inv) => sum + inv.amount, 0),
             pendingAdvanceAmount: activeAdvances.reduce((sum, adv) => sum + adv.advanceAmount, 0),
@@ -786,7 +836,7 @@ export const mockApi = {
             invoiceCount: userInvoices.length,
             activeAdvanceCount: activeAdvances.length
         }
-        
+
         return Promise.resolve(ok(summary))
     }
 }
@@ -816,6 +866,45 @@ function saveRegisteredUsers(users: RegisteredUser[]) {
     localStorage.setItem(USERS_KEY, JSON.stringify(users))
 }
 
+// Seed demo users into registered users so they can log in on first launch
+const DEMO_SEED_USERS: RegisteredUser[] = [
+    {
+        id: 'u-admin',
+        email: 'admin@hassil.io',
+        passwordHash: '123456',
+        name: 'Hassil Admin',
+        displayName: 'Hassil Admin',
+        accountType: 'SmallBusiness',
+    },
+    {
+        id: 'u-ahmed',
+        email: 'employer@example.com',
+        passwordHash: '123456',
+        name: 'Amin Talahmeh',
+        displayName: 'Afyia',
+        accountType: 'SmallBusiness',
+    },
+    {
+        id: 'u-sara',
+        email: 'sara@saradesigns.io',
+        passwordHash: '123456',
+        name: 'Sara Al-Rashid',
+        displayName: 'Sara Designs',
+        accountType: 'Freelancer',
+    },
+]
+
+function ensureDemoUsersSeeded() {
+    const existing = loadRegisteredUsers()
+    const existingIds = new Set(existing.map(u => u.id))
+    const toAdd = DEMO_SEED_USERS.filter(u => !existingIds.has(u.id))
+    if (toAdd.length > 0) {
+        saveRegisteredUsers([...existing, ...toAdd])
+    }
+}
+ensureDemoUsersSeeded()
+
+
 function seedDataForUser(userId: string) {
     // 1. A past paid invoice to show history
     const pastInvoice: Invoice = {
@@ -836,7 +925,7 @@ function seedDataForUser(userId: string) {
         createdAt: '2026-03-01T09:00:00Z',
         documents: [],
     }
-    
+
     // 2. A new open invoice to show in the list and allow advances
     const openInvoice: Invoice = {
         id: generateId('inv'),
@@ -893,27 +982,20 @@ export const authApi = {
         }
         const newUser = { ...userData, id: generateId('u') }
         saveRegisteredUsers([...users, newUser])
-        
+
         // Seed some mock data for the new account so the dashboard isn't empty
         seedDataForUser(newUser.id)
-        
+
         return { success: true, user: newUser }
     },
 
     login(email: string, password: string): { success: boolean; user?: RegisteredUser | User; error?: string } {
         const users = loadRegisteredUsers()
-        const foundReg = users.find(
+        const found = users.find(
             (u) => u.email.toLowerCase() === email.toLowerCase() && u.passwordHash === password,
         )
-        if (foundReg) {
-            return { success: true, user: foundReg }
-        }
-
-        const foundSeed = mockUsers.find(
-            (u) => u.email.toLowerCase() === email.toLowerCase() && password === '123456' // Default password for seeds
-        )
-        if (foundSeed) {
-            return { success: true, user: foundSeed }
+        if (found) {
+            return { success: true, user: found }
         }
 
         return { success: false, error: 'Invalid email or password.' }
@@ -923,7 +1005,7 @@ export const authApi = {
         // Try to find in registered users (localStorage)
         const users = loadRegisteredUsers()
         const regUser = users.find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase())
-        
+
         // Try to find in seed data
         const seedUser = mockUsers.find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase())
 

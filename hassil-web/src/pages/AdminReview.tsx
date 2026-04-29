@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { AdminDecision, AdvanceRequest, AiReviewSnapshot, Invoice, User } from '../types'
+import type { AdminDecision, AiReviewSnapshot } from '../types'
 import {
     mockUsers,
     formatCurrency,
     getModelLabel,
     getReviewFlags,
 } from '../data/mockApi'
-import { AdminService } from '../services/adminService'
+import { useAuth, useAdmin } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
 import ModelBadge from '../components/ModelBadge'
@@ -17,8 +17,6 @@ import ReviewScore from '../components/ReviewScore'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Table from '../components/Table'
 import Icon from '../components/Icon'
-
-const currentUser: User = mockUsers[2] // admin user
 
 function AiReviewCard({ snapshot }: { snapshot: AiReviewSnapshot }) {
     const statusMap = { Low: 'Approved', Medium: 'PendingReview', High: 'Rejected' } as const
@@ -44,36 +42,41 @@ function AiReviewCard({ snapshot }: { snapshot: AiReviewSnapshot }) {
 export default function AdminReview() {
     const { advanceId } = useParams<{ advanceId?: string }>()
     const navigate = useNavigate()
-    const [advances, setAdvances] = useState<AdvanceRequest[]>([])
-    const [invoices, setInvoices] = useState<Invoice[]>([])
-    const [aiSnapshots, setAiSnapshots] = useState<AiReviewSnapshot[]>([])
+    const { user: authUser } = useAuth()
+    const { 
+        advances, 
+        invoices, 
+        aiSnapshots, 
+        loading, 
+        refetch, 
+        updateAdvance, 
+        updateInvoice, 
+        addReview 
+    } = useAdmin()
+    
     const [filter, setFilter] = useState('Needs action')
 
-    const load = async () => {
-        const [advancesData, invoicesData, aiSnapshotsData] = await AdminService.getReviewData()
-        setAdvances(advancesData)
-        setInvoices(invoicesData)
-        setAiSnapshots(aiSnapshotsData)
-    }
-
-    useEffect(() => { load() }, [])
+    useEffect(() => { refetch() }, [refetch])
 
     const doDecision = async (id: string, decision: AdminDecision) => {
         const adv = advances.find((a) => a.id === id)
-        if (!adv) return
+        if (!adv || !authUser) return
         const now = new Date().toISOString()
         const newStatus = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'PendingReview'
         
-        await AdminService.updateAdvance(id, { status: newStatus, updatedAt: now })
-        await AdminService.updateInvoice(adv.invoiceId, { status: newStatus === 'Approved' ? 'Approved' : newStatus === 'Rejected' ? 'Rejected' : 'PendingReview' })
-        await AdminService.addReview({
+        await updateAdvance(id, { status: newStatus, updatedAt: now })
+        await updateInvoice(adv.invoiceId, { status: newStatus === 'Approved' ? 'Approved' : newStatus === 'Rejected' ? 'Rejected' : 'PendingReview' })
+        await addReview({
             advanceRequestId: id,
-            reviewerUserId: currentUser.id,
+            reviewerUserId: authUser.id,
             decision,
             notes: decision === 'RequestMoreInfo' ? 'Additional evidence requested.' : 'Manual review completed.',
         })
-        await load()
         navigate('/admin')
+    }
+
+    if (loading) {
+        return <div className="loading-state">Loading review data...</div>
     }
 
     // Detail view
@@ -123,6 +126,19 @@ export default function AdminReview() {
                                     ['Supporting documents', `${invoice.documents?.length ?? 0}`],
                                 ]}
                             />
+                            {invoice.documents && invoice.documents.length > 0 && (
+                                <div className="mt-16">
+                                    <h4 className="small-label">Evidence Files</h4>
+                                    <div className="file-list mt-8">
+                                        {invoice.documents.map(doc => (
+                                            <div key={doc.id} className="file-pill">
+                                                <Icon name="document" />
+                                                <span>{doc.fileName}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </DisclosurePanel>
                         <ReviewScore score={selected.reviewScore} flags={flags} />
                         <div className="form-actions mt-16">

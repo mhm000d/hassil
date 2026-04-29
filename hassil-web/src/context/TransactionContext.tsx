@@ -1,6 +1,7 @@
-import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useState, useEffect, useCallback, useContext, type ReactNode } from 'react'
 import type { Transaction } from '../types'
 import { TransactionService } from '../services'
+import { AuthContext } from './AuthContext'
 
 interface TransactionContextValue {
     transactions: Transaction[]
@@ -19,6 +20,7 @@ export const TransactionContext = createContext<TransactionContextValue>({
 })
 
 export function TransactionProvider({ children }: { children: ReactNode }) {
+    const { user } = useContext(AuthContext)
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -36,9 +38,10 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
         }
     }, [])
 
+    // Re-fetch whenever the logged-in user changes (login, logout, account switch)
     useEffect(() => {
         fetchTransactions()
-    }, [fetchTransactions])
+    }, [fetchTransactions, user?.id])
 
     const create = async (tx: Omit<Transaction, 'id' | 'createdAt'>) => {
         const res = await TransactionService.create(tx)

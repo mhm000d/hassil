@@ -1,6 +1,7 @@
-import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useState, useEffect, useCallback, useContext, type ReactNode } from 'react'
 import type { AdvanceRequest } from '../types'
 import { AdvanceService } from '../services'
+import { AuthContext } from './AuthContext'
 
 interface AdvanceContextValue {
     advances: AdvanceRequest[]
@@ -35,6 +36,7 @@ export const AdvanceContext = createContext<AdvanceContextValue>({
 })
 
 export function AdvanceProvider({ children }: { children: ReactNode }) {
+    const { user } = useContext(AuthContext)
     const [advances, setAdvances] = useState<AdvanceRequest[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -52,9 +54,10 @@ export function AdvanceProvider({ children }: { children: ReactNode }) {
         }
     }, [])
 
+    // Re-fetch whenever the logged-in user changes (login, logout, account switch)
     useEffect(() => {
         fetchAdvances()
-    }, [fetchAdvances])
+    }, [fetchAdvances, user?.id])
 
     const get = async (id: string) => {
         return await AdvanceService.get(id)

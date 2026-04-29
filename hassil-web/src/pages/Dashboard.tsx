@@ -27,7 +27,9 @@ export default function Dashboard() {
         ?? seedUser.email
 
     const openInvoices = invoices.filter((inv) => inv.status !== 'Paid' && inv.status !== 'Rejected')
-    const availableNow = openInvoices.reduce((sum, inv) => sum + calculateQuote(authUser || seedUser, inv).advanceAmount, 0)
+    // Only invoices without an existing advance are truly "available to advance"
+    const eligibleInvoices = openInvoices.filter((inv) => !inv.advanceRequestId)
+    const availableNow = eligibleInvoices.reduce((sum, inv) => sum + calculateQuote(authUser || seedUser, inv).advanceAmount, 0)
     const outstanding = openInvoices.reduce((sum, inv) => sum + inv.amount, 0)
 
     const activeAdvances = advances.filter((adv) => !['Repaid', 'Rejected'].includes(adv.status))
@@ -38,7 +40,7 @@ export default function Dashboard() {
         .reduce((sum, tx) => sum + tx.amount, 0)
 
     const recentTx = transactions.slice(0, 5)
-    const firstOpenInvoice = openInvoices.find((inv) => !inv.advanceRequestId) ?? openInvoices[0]
+    const firstOpenInvoice = eligibleInvoices[0] ?? openInvoices[0]
 
     return (
         <>
@@ -49,7 +51,7 @@ export default function Dashboard() {
                 <div className="hero-main-card">
                     <div className="hero-card-label">Available to advance</div>
                     <strong>{formatCurrency(availableNow)}</strong>
-                    <p>{openInvoices.length} open receivables eligible under current trust limits.</p>
+                    <p>{eligibleInvoices.length} open receivable{eligibleInvoices.length === 1 ? '' : 's'} eligible under current trust limits.</p>
                     <button
                         className="btn btn-secondary btn-sm"
                         onClick={() =>

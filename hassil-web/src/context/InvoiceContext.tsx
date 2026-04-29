@@ -1,6 +1,7 @@
-import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useState, useEffect, useCallback, useContext, type ReactNode } from 'react'
 import type { Invoice } from '../types'
 import { InvoiceService } from '../services'
+import { AuthContext } from './AuthContext'
 
 interface InvoiceContextValue {
     invoices: Invoice[]
@@ -27,6 +28,7 @@ export const InvoiceContext = createContext<InvoiceContextValue>({
 })
 
 export function InvoiceProvider({ children }: { children: ReactNode }) {
+    const { user } = useContext(AuthContext)
     const [invoices, setInvoices] = useState<Invoice[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -44,9 +46,10 @@ export function InvoiceProvider({ children }: { children: ReactNode }) {
         }
     }, [])
 
+    // Re-fetch whenever the logged-in user changes (login, logout, account switch)
     useEffect(() => {
         fetchInvoices()
-    }, [fetchInvoices])
+    }, [fetchInvoices, user?.id])
 
     const get = async (id: string) => {
         return await InvoiceService.get(id)

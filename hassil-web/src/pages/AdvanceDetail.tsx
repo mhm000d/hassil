@@ -57,8 +57,8 @@ export default function AdvanceDetail() {
     const navigate = useNavigate()
     const { user: authUser } = useAuth()
     const { get: getInvoice } = useInvoices()
-    const { 
-        get: getAdvance, 
+    const {
+        get: getAdvance,
         simulateDisbursement,
         simulateClientPaymentDetected,
         simulateUserRepayment,
@@ -67,7 +67,7 @@ export default function AdvanceDetail() {
     } = useAdvances()
     const { transactions: allTransactions } = useTransactions()
     const { getAiSnapshot } = useAdmin()
-    
+
     const [advance, setAdvance] = useState<AdvanceRequest | null>(null)
     const [invoice, setInvoice] = useState<Invoice | null>(null)
     const [aiSnapshot, setAiSnapshot] = useState<AiReviewSnapshot | null>(null)
@@ -77,12 +77,12 @@ export default function AdvanceDetail() {
         const advData = await getAdvance(id)
         if (!advData) return
         setAdvance(advData)
-        
+
         const [invData, aiData] = await Promise.all([
             getInvoice(advData.invoiceId),
             getAiSnapshot(id)
         ])
-        
+
         if (invData) setInvoice(invData)
         if (aiData) setAiSnapshot(aiData)
     }
@@ -111,8 +111,7 @@ export default function AdvanceDetail() {
     if (!advance || !invoice) {
         return (
             <div className="card">
-                <h2 className="card-title">Advance not found</h2>
-                <button className="btn btn-primary mt-16" onClick={() => navigate('/dashboard')}>Back to dashboard</button>
+                <h2 className="card-title">Fetching Advance Details...</h2>
             </div>
         )
     }
@@ -175,11 +174,25 @@ export default function AdvanceDetail() {
                         </div>
                     )}
                     {nextLabel ? (
-                        <button className="btn btn-sim full-width mt-16" onClick={simulate}>
-                            <Icon name="next" /> {nextLabel}
-                        </button>
+                        <div className="simulation-panel mt-16">
+                            <div className="simulation-header">
+                                <Icon name="settings" />
+                                <span>Lifecycle Simulator</span>
+                            </div>
+                            <p className="simulation-text">Trigger the next phase of the financing lifecycle to test state transitions and ledger entries.</p>
+                            <button className="btn btn-sim full-width" onClick={simulate}>
+                                <Icon name="next" /> {nextLabel}
+                            </button>
+                        </div>
                     ) : (
-                        <p className="soft-text mt-16">No next step available for this status.</p>
+                        advance.status === 'Repaid' ? (
+                            <div className="simulation-panel success mt-16">
+                                <Icon name="check" />
+                                <span>Lifecycle Completed</span>
+                            </div>
+                        ) : (
+                            <p className="soft-text mt-16">No next step available for this status.</p>
+                        )
                     )}
                 </div>
                 <div>
