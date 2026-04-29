@@ -1,67 +1,55 @@
+<<<<<<< HEAD
 import { useState } from 'react'
 import './App.css'
 import Home from './pages/HomeFreelancer'
+=======
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import AppLayout from './components/AppLayout'
+import Dashboard from './pages/Dashboard'
+>>>>>>> e2568e0ee62136a256906559e42beb1586283981
 import Invoices from './pages/Invoices'
-import Advances from './pages/Advances'
-import Transactions from './pages/Transactions'
-import Profile from './pages/Profile'
-import Settings from './pages/Settings'
+import NewInvoice from './pages/NewInvoice'
+import InvoiceDetail from './pages/InvoiceDetail'
+import InvoiceAdvance from './pages/InvoiceAdvance'
+import AdvanceDetail from './pages/AdvanceDetail'
+import AdminReview from './pages/AdminReview'
+import Ledger from './pages/Ledger'
+import CashFlow from './pages/CashFlow'
+import ClientConfirmation from './pages/ClientConfirmation'
+import Landing from './pages/Landing'
 
-const pages = [
-  'Home',
-  'Invoices',
-  'Advances',
-  'Transactions',
-  'Profile',
-  'Settings',
-] as const
-
-type PageName = (typeof pages)[number]
+function AppShell() {
+    return (
+        <AppLayout>
+            <Routes>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/invoices" element={<Invoices />} />
+                <Route path="/invoices/new" element={<NewInvoice />} />
+                <Route path="/invoices/:id" element={<InvoiceDetail />} />
+                <Route path="/invoices/:id/advance" element={<InvoiceAdvance />} />
+                <Route path="/advances/:id" element={<AdvanceDetail />} />
+                <Route path="/admin" element={<AdminReview />} />
+                <Route path="/admin/:advanceId" element={<AdminReview />} />
+                <Route path="/ledger" element={<Ledger />} />
+                <Route path="/cash-flow" element={<CashFlow />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+        </AppLayout>
+    )
+}
 
 function App() {
-  const [activePage, setActivePage] = useState<PageName>('Home')
-
-  const renderPage = () => {
-    switch (activePage) {
-      case 'Invoices':
-        return <Invoices />
-      case 'Advances':
-        return <Advances />
-      case 'Transactions':
-        return <Transactions />
-      case 'Profile':
-        return <Profile />
-      case 'Settings':
-        return <Settings />
-      default:
-        return <Home />
-    }
-  }
-
-  return (
-    <div className="app-shell">
-      <header className="app-header">
-        <div className="brand">Hassil</div>
-        <nav className="app-nav" aria-label="Main navigation">
-          {pages.map((page) => (
-            <button
-              key={page}
-              type="button"
-              className={page === activePage ? 'nav-item active' : 'nav-item'}
-              onClick={() => setActivePage(page)}
-            >
-              {page}
-            </button>
-          ))}
-        </nav>
-      </header>
-      <main className="app-content">{renderPage()}</main>
-      <footer className="app-footer">
-        <span>© {new Date().getFullYear()} Hassil</span>
-        <span>Designed for fast cash flow clarity</span>
-      </footer>
-    </div>
-  )
+    return (
+        <BrowserRouter>
+            <Routes>
+                {/* Public — no shell */}
+                <Route path="/" element={<Landing />} />
+                <Route path="/client/confirm/:token" element={<ClientConfirmation />} />
+                {/* App shell */}
+                <Route path="/*" element={<AppShell />} />
+            </Routes>
+        </BrowserRouter>
+    )
 }
 
 export default App
