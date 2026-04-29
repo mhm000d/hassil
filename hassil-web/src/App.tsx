@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-import { useState } from 'react'
-import './App.css'
-import Home from './pages/HomeFreelancer'
-=======
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
 import Dashboard from './pages/Dashboard'
->>>>>>> e2568e0ee62136a256906559e42beb1586283981
 import Invoices from './pages/Invoices'
 import NewInvoice from './pages/NewInvoice'
 import InvoiceDetail from './pages/InvoiceDetail'
