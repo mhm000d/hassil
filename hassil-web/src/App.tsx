@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import './App.css'
-import Home from './pages/Home'
+import Home from './pages/HomeFreelancer'
 import Invoices from './pages/Invoices'
 import Advances from './pages/Advances'
 import Transactions from './pages/Transactions'

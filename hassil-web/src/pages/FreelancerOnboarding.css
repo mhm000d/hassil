@@ -1,0 +1,203 @@
+/* ── Onboarding Page ───────────────────────────── */
+.onboarding-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-gray-50);
+  padding: 40px 24px;
+}
+
+/* ── Card ──────────────────────────────────────── */
+.onboarding-card {
+  width: 100%;
+  max-width: 720px;
+  background: var(--color-white);
+  border-radius: 16px;
+  border: 1px solid var(--color-gray-200);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.06);
+  padding: 44px 48px;
+  animation: cardSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Logo ──────────────────────────────────────── */
+.onboarding-card__logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.onboarding-card__logo-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.onboarding-card__logo-text {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--color-gray-900);
+  letter-spacing: -0.5px;
+}
+
+.onboarding-card__logo-accent {
+  color: var(--color-accent);
+}
+
+/* ── Title & Subtitle ──────────────────────────── */
+.onboarding-card__title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--color-gray-900);
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.onboarding-card__subtitle {
+  font-size: 0.88rem;
+  color: var(--color-gray-500);
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+/* ── Form ──────────────────────────────────────── */
+.onboarding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.onboarding-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ── Field ─────────────────────────────────────── */
+.onboarding-field__label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-gray-500);
+  margin-bottom: 8px;
+}
+
+.onboarding-field__input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  color: var(--color-gray-800);
+  background: var(--color-white);
+  transition: all var(--transition-base);
+  outline: none;
+}
+
+.onboarding-field__input::placeholder {
+  color: var(--color-gray-400);
+}
+
+.onboarding-field__input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(27, 94, 59, 0.1);
+}
+
+/* ── Actions ───────────────────────────────────── */
+.onboarding-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-gray-100);
+}
+
+.onboarding-btn--secondary {
+  padding: 11px 28px;
+  background: transparent;
+  color: var(--color-gray-600);
+  font-weight: 600;
+  font-size: 0.88rem;
+  border: 1.5px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.onboarding-btn--secondary:hover {
+  background: var(--color-gray-50);
+  border-color: var(--color-gray-400);
+}
+
+.onboarding-btn--primary {
+  padding: 11px 28px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-weight: 600;
+  font-size: 0.88rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 4px 12px rgba(27, 94, 59, 0.25);
+}
+
+.onboarding-btn--primary:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(27, 94, 59, 0.35);
+}
+
+.onboarding-btn--primary:active {
+  transform: translateY(0);
+}
+
+/* ── Responsive ────────────────────────────────── */
+@media (max-width: 640px) {
+  .onboarding-card {
+    padding: 32px 24px;
+  }
+
+  .onboarding-form__row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .onboarding-card__title {
+    font-size: 1.35rem;
+  }
+
+  .onboarding-form__actions {
+    flex-direction: column-reverse;
+  }
+
+  .onboarding-btn--primary,
+  .onboarding-btn--secondary {
+    width: 100%;
+    text-align: center;
+  }
+}

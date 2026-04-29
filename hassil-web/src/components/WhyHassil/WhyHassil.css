@@ -1,0 +1,144 @@
+.why-hassil {
+  padding: var(--section-padding);
+  background: var(--color-white);
+}
+
+.why-hassil__inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+/* ── Image Side ───────────────── */
+.why-hassil__image-wrapper {
+  position: relative;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  background: linear-gradient(
+    145deg,
+    #0a1f14 0%,
+    #0d3320 30%,
+    #133d2a 50%,
+    #0a2618 70%,
+    #061a10 100%
+  );
+  box-shadow: var(--shadow-lg);
+}
+
+.why-hassil__image-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(10, 51, 32, 0.3) 0%,
+      transparent 50%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.02) 0px,
+      rgba(255, 255, 255, 0.02) 1px,
+      transparent 1px,
+      transparent 60px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.015) 0px,
+      rgba(255, 255, 255, 0.015) 1px,
+      transparent 1px,
+      transparent 40px
+    );
+  pointer-events: none;
+}
+
+.why-hassil__image-glow {
+  position: absolute;
+  bottom: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 60%;
+  background: radial-gradient(
+    ellipse,
+    rgba(22, 163, 74, 0.15) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+/* ── Content Side ─────────────── */
+.why-hassil__content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.why-hassil__title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-gray-900);
+  margin-bottom: 24px;
+}
+
+/* ── Feature Items ────────────── */
+.why-hassil__features {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.why-hassil__feature {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.why-hassil__feature-icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
+  background: var(--color-stat-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.why-hassil__feature-icon svg {
+  width: 20px;
+  height: 20px;
+  color: var(--color-primary);
+}
+
+.why-hassil__feature-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.why-hassil__feature-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-gray-900);
+}
+
+.why-hassil__feature-desc {
+  font-size: 0.9rem;
+  color: var(--color-gray-500);
+  line-height: 1.65;
+}
+
+@media (max-width: 960px) {
+  .why-hassil__inner {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .why-hassil__image-wrapper {
+    aspect-ratio: 16 / 9;
+    max-height: 320px;
+  }
+}
