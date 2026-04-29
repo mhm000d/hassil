@@ -5,11 +5,14 @@ using Hassil.Api.Services.Auth;
 using Hassil.Api.Services.AdvanceRequests;
 using Hassil.Api.Services.AdminReviews;
 using Hassil.Api.Services.ClientConfirmations;
+using Hassil.Api.Services.Dashboard;
 using Hassil.Api.Services.Demo;
 using Hassil.Api.Services.Invoices;
 using Hassil.Api.Services.Ledger;
 using Hassil.Api.Services.Notifications;
+using Hassil.Api.Services.Onboarding;
 using Hassil.Api.Services.OpenBanking;
+using Hassil.Api.Services.Transactions;
 using Hassil.Api.Services.TrustScores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +38,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "bearer",
         BearerFormat = "Demo",
         In = ParameterLocation.Header,
-        Description = "Enter only the access token returned by /api/auth/demo-login."
+        Description = "Enter only the access token returned by demo login or onboarding."
     });
 
     options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
@@ -54,6 +57,7 @@ builder.Services.AddDbContext<HassilDbContext>(options =>
 
 builder.Services.AddSingleton<IDemoTokenService, DemoTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 builder.Services.AddScoped<IDemoSeedService, DemoSeedService>();
 builder.Services.AddScoped<IInvoiceFingerprintService, InvoiceFingerprintService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
@@ -67,6 +71,8 @@ builder.Services.AddScoped<IClientConfirmationService, ClientConfirmationService
 builder.Services.AddScoped<IAiReviewService, AiReviewService>();
 builder.Services.AddScoped<IAdminReviewService, AdminReviewService>();
 builder.Services.AddScoped<ITrustScoreService, TrustScoreService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 var app = builder.Build();
 

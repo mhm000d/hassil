@@ -1177,11 +1177,17 @@ Hassil.Api/
     ClientConfirmations/
       ClientConfirmationRequests.cs
       ClientConfirmationResponses.cs
+    Dashboard/
+      DashboardResponses.cs
     Demo/
       DemoResponses.cs
     Invoices/
       InvoiceRequests.cs
       InvoiceResponses.cs
+    Onboarding/
+      OnboardingRequests.cs
+    Transactions/
+      TransactionResponses.cs
     TrustScores/
       TrustScoreResponses.cs
     Users/
@@ -1191,7 +1197,10 @@ Hassil.Api/
     AdminReviewsController.cs
     AuthController.cs
     ClientConfirmationsController.cs
+    DashboardController.cs
     InvoicesController.cs
+    OnboardingController.cs
+    TransactionsController.cs
     TrustScoresController.cs
     DemoController.cs
     UsersController.cs
@@ -1209,8 +1218,10 @@ Hassil.Api/
     AdminReviewMappings.cs
     AuthMappings.cs
     ClientConfirmationMappings.cs
+    DashboardMappings.cs
     DemoMappings.cs
     InvoiceMappings.cs
+    TransactionMappings.cs
     TrustScoreMappings.cs
     UserMappings.cs
   Middleware/
@@ -1241,6 +1252,10 @@ Hassil.Api/
     ClientConfirmations/
       ClientConfirmationService.cs
       IClientConfirmationService.cs
+    Dashboard/
+      DashboardService.cs
+      DashboardSummary.cs
+      IDashboardService.cs
     Invoices/
       IInvoiceFingerprintService.cs
       IInvoiceService.cs
@@ -1255,6 +1270,12 @@ Hassil.Api/
     Notifications/
       IMockNotificationService.cs
       MockNotificationService.cs
+    Onboarding/
+      IOnboardingService.cs
+      OnboardingService.cs
+    Transactions/
+      ITransactionService.cs
+      TransactionService.cs
     TrustScores/
       ITrustScoreService.cs
       TrustScoreHistory.cs
@@ -1269,7 +1290,10 @@ Core services:
 | AdvanceCalculatorService | Calculates model-specific advance, fee, buffer, and repayment values. |
 | ReviewScoringService | Applies deterministic review rules and returns approval recommendation. |
 | AiReviewService | Produces a short admin-facing review summary and risk explanation. |
+| OnboardingService | Creates small business or freelancer users, attaches the correct profile, and returns an auth token. |
 | TrustScoreService | Updates trust score and writes trust score events. |
+| DashboardService | Builds current-user dashboard metrics from invoices, advances, trust score, and ledger activity. |
+| TransactionService | Returns current-user ledger transaction history. |
 | LedgerService | Writes ledger transactions for disbursement, repayment, fee collection, and buffer release. |
 | MockOpenBankingGateway | Simulates Open Banking read/write operations. |
 | MockNotificationService | Creates confirmation token and mock email preview for factoring clients. |

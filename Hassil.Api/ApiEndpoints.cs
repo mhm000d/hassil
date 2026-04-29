@@ -12,6 +12,15 @@ public static class ApiEndpoints
         public const string DemoLogin = $"{Base}/demo-login";
     }
 
+    // -- Onboarding Endpoints ------------------------------------------------
+    public static class Onboarding
+    {
+        private const string Base = $"{ApiBase}/onboarding";
+
+        public const string SmallBusiness = $"{Base}/small-business";
+        public const string Freelancer = $"{Base}/freelancer";
+    }
+
     // -- Demo Endpoints -------------------------------------------------------
     public static class Demo
     {
@@ -34,6 +43,22 @@ public static class ApiEndpoints
         private const string Base = $"{ApiBase}/trust-score";
 
         public const string Events = $"{Base}/events";
+    }
+
+    // -- Dashboard Endpoints -------------------------------------------------
+    public static class Dashboard
+    {
+        private const string Base = $"{ApiBase}/dashboard";
+
+        public const string Summary = $"{Base}/summary";
+    }
+
+    // -- Transaction Endpoints ----------------------------------------------
+    public static class Transactions
+    {
+        private const string Base = $"{ApiBase}/transactions";
+
+        public const string GetAll = Base;
     }
 
     // -- Invoice Endpoints ----------------------------------------------------
