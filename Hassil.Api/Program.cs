@@ -2,8 +2,11 @@ using Hassil.Api.Authentication;
 using Hassil.Api.Database;
 using Hassil.Api.Middleware;
 using Hassil.Api.Services.Auth;
+using Hassil.Api.Services.AdvanceRequests;
 using Hassil.Api.Services.Demo;
 using Hassil.Api.Services.Invoices;
+using Hassil.Api.Services.Ledger;
+using Hassil.Api.Services.OpenBanking;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
@@ -50,6 +53,11 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDemoSeedService, DemoSeedService>();
 builder.Services.AddScoped<IInvoiceFingerprintService, InvoiceFingerprintService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IAdvanceCalculatorService, AdvanceCalculatorService>();
+builder.Services.AddScoped<IReviewScoringService, ReviewScoringService>();
+builder.Services.AddScoped<ILedgerService, LedgerService>();
+builder.Services.AddScoped<IOpenBankingGateway, MockOpenBankingGateway>();
+builder.Services.AddScoped<IAdvanceRequestService, AdvanceRequestService>();
 
 var app = builder.Build();
 

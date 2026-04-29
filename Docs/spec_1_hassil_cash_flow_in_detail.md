@@ -1159,36 +1159,76 @@ Dashboard:
 
 ```text
 Hassil.Api/
+  ApiEndpoints.cs
+  Program.cs
+  Authentication/
+    DemoBearerAuthenticationDefaults.cs
+    DemoBearerAuthenticationHandler.cs
+  Contracts/
+    AdvanceRequests/
+      AdvanceRequestRequests.cs
+      AdvanceRequestResponses.cs
+    Auth/
+      AuthRequests.cs
+      AuthResponses.cs
+    Demo/
+      DemoResponses.cs
+    Invoices/
+      InvoiceRequests.cs
+      InvoiceResponses.cs
+    Users/
+      UserResponses.cs
   Controllers/
-    AuthController.cs
-    OnboardingController.cs
-    InvoicesController.cs
     AdvanceRequestsController.cs
-    ClientConfirmationsController.cs
-    AdminReviewsController.cs
-    DashboardController.cs
-  Domain/
-    Models/
-    Enums/
+    AuthController.cs
+    InvoicesController.cs
+    DemoController.cs
+    UsersController.cs
   Database/
     Configurations/
     Migrations/
     HassilDbContext.cs
-  Services/
-    InvoiceFingerprintService.cs
-    AdvanceCalculatorService.cs
-    ReviewScoringService.cs
-    AiReviewService.cs
-    TrustScoreService.cs
-    LedgerService.cs
-    MockOpenBankingGateway.cs
-    MockNotificationService.cs
-    DemoSeedService.cs
-  Contracts/
-    Requests/
-    Responses/
+  Domain/
+    Enums/
+    Models/
+  Exceptions/
+    AppException.cs
+  Mappings/
+    AdvanceRequestMappings.cs
+    AuthMappings.cs
+    DemoMappings.cs
+    InvoiceMappings.cs
+    UserMappings.cs
   Middleware/
     ErrorHandlingMiddleware.cs
+  Services/
+    AdvanceRequests/
+      AdvanceCalculatorService.cs
+      AdvanceQuote.cs
+      AdvanceRequestService.cs
+      IAdvanceCalculatorService.cs
+      IAdvanceRequestService.cs
+      IReviewScoringService.cs
+      ReviewScoringService.cs
+    Auth/
+      AuthService.cs
+      DemoTokenService.cs
+      IAuthService.cs
+      IDemoTokenService.cs
+    Demo/
+      DemoSeedService.cs
+      IDemoSeedService.cs
+    Invoices/
+      IInvoiceFingerprintService.cs
+      IInvoiceService.cs
+      InvoiceFingerprintService.cs
+      InvoiceService.cs
+    Ledger/
+      ILedgerService.cs
+      LedgerService.cs
+    OpenBanking/
+      IOpenBankingGateway.cs
+      MockOpenBankingGateway.cs
 ```
 
 Core services:

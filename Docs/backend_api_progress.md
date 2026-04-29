@@ -15,27 +15,32 @@ This document explains what the backend currently supports, how the existing end
   - [Get Invoice Details](#get-invoice-details)
   - [Add Invoice Document Placeholder](#add-invoice-document-placeholder)
   - [Submit Invoice](#submit-invoice)
+  - [Advance Quote](#advance-quote)
+  - [Create Advance Request](#create-advance-request)
+  - [List Current User Advance Requests](#list-current-user-advance-requests)
+  - [Get Advance Request Details](#get-advance-request-details)
+  - [Simulate Advance Disbursement](#simulate-advance-disbursement)
+  - [Simulate Freelancer Client Payment Detected](#simulate-freelancer-client-payment-detected)
+  - [Simulate Freelancer User Repayment](#simulate-freelancer-user-repayment)
+  - [Simulate Factoring Client Payment To Hassil](#simulate-factoring-client-payment-to-hassil)
+  - [Simulate Factoring Buffer Release](#simulate-factoring-buffer-release)
 - [Recommended Current Workflow](#recommended-current-workflow)
 - [Error Response Shape](#error-response-shape)
 - [Recommended Order For Remaining Features](#recommended-order-for-remaining-features)
-  - [1. Advance Quote](#1-advance-quote)
-  - [2. Create Advance Request](#2-create-advance-request)
-  - [3. Review Scoring](#3-review-scoring)
-  - [4. Client Confirmation](#4-client-confirmation)
-  - [5. Admin Review](#5-admin-review)
-  - [6. Simulated Money Movement](#6-simulated-money-movement)
-  - [7. Trust Score Events](#7-trust-score-events)
-  - [8. Dashboard And Transactions](#8-dashboard-and-transactions)
+  - [1. Client Confirmation](#1-client-confirmation)
+  - [2. Admin Review](#2-admin-review)
+  - [3. Trust Score Events](#3-trust-score-events)
+  - [4. Dashboard And Transactions](#4-dashboard-and-transactions)
 
 ## Current Backend Scope
 
 The backend currently covers the first working slice of the demo:
 
 ```text
-seed demo data -> demo login -> authorize requests -> create/list/submit invoices
+seed demo data -> demo login -> authorize requests -> create/list/submit invoices -> quote/create/simulate advances
 ```
 
-It does not yet include advance requests, client confirmation, admin review, simulated payments, trust-score event listing, dashboard summaries, or transaction listing.
+It does not yet include public client confirmation endpoints, admin review endpoints, trust-score event listing, dashboard summaries, or standalone transaction listing.
 
 ## How To Use Swagger Authorization
 
@@ -262,6 +267,156 @@ Use this when the invoice is ready for advance eligibility.
 
 The endpoint fails if the invoice is not currently in `Draft`.
 
+### Advance Quote
+
+```http
+POST /api/advance-requests/quote
+```
+
+Calculates an advance offer for an invoice without writing a new advance request.
+
+Example request:
+
+```json
+{
+  "invoiceId": "invoice-id",
+  "requestedPercent": null
+}
+```
+
+If `requestedPercent` is null, the API uses the maximum allowed percent for the user's account type and trust score.
+
+The quote returns:
+
+- financing model: `InvoiceDiscounting` for freelancers, `InvoiceFactoring` for small businesses
+- advance amount
+- fee amount
+- settlement buffer
+- expected repayment amount
+- eligibility messages
+
+### Create Advance Request
+
+```http
+POST /api/advance-requests
+```
+
+Creates an advance request from a submitted invoice.
+
+Example request:
+
+```json
+{
+  "invoiceId": "invoice-id",
+  "requestedPercent": null,
+  "termsAccepted": true,
+  "termsVersion": "hackathon-v1"
+}
+```
+
+What it does:
+
+- Calculates the quote.
+- Scores the request using deterministic review rules.
+- Stores accepted terms.
+- Moves the invoice from `Submitted` to an advance-related status.
+- Auto-approves strong freelancer discounting requests.
+- Sends factoring requests to `PendingClientConfirmation` until client confirmation is implemented.
+
+### List Current User Advance Requests
+
+```http
+GET /api/advance-requests
+```
+
+Returns advance requests owned by the authenticated user.
+
+### Get Advance Request Details
+
+```http
+GET /api/advance-requests/{id}
+```
+
+Returns one advance request, including invoice summary and ledger transactions.
+
+### Simulate Advance Disbursement
+
+```http
+POST /api/advance-requests/{id}/simulate-disbursement
+```
+
+Moves an approved advance from:
+
+```text
+Approved -> Disbursed
+```
+
+Also marks the invoice as `Disbursed` and records an `AdvanceDisbursement` transaction.
+
+### Simulate Freelancer Client Payment Detected
+
+```http
+POST /api/advance-requests/{id}/simulate-client-payment-detected
+```
+
+For freelancer discounting only.
+
+Moves the advance from:
+
+```text
+Disbursed -> ClientPaymentDetected
+```
+
+Records a `DetectedIncomingPayment` transaction.
+
+### Simulate Freelancer User Repayment
+
+```http
+POST /api/advance-requests/{id}/simulate-user-repayment
+```
+
+For freelancer discounting only.
+
+Moves the advance from:
+
+```text
+ClientPaymentDetected -> Repaid
+```
+
+Also marks the invoice as `Paid`, records repayment and fee transactions, and increases trust score.
+
+### Simulate Factoring Client Payment To Hassil
+
+```http
+POST /api/advance-requests/{id}/simulate-client-payment-to-hassil
+```
+
+For small business factoring only.
+
+Moves the advance from:
+
+```text
+Disbursed -> ClientPaidHassil
+```
+
+Records a `ClientPaymentToHassil` transaction.
+
+### Simulate Factoring Buffer Release
+
+```http
+POST /api/advance-requests/{id}/simulate-buffer-release
+```
+
+For small business factoring only.
+
+Moves the advance through settlement completion:
+
+```text
+ClientPaidHassil -> BufferReleased -> Repaid
+```
+
+Also marks the invoice as `Paid`, records platform fee and buffer release transactions, and increases trust score.
+
 ## Recommended Current Workflow
 
 ```text
@@ -272,8 +427,10 @@ The endpoint fails if the invoice is not currently in `Draft`.
 5. POST /api/invoices
 6. POST /api/invoices/{id}/documents
 7. POST /api/invoices/{id}/submit
-8. GET /api/invoices
-9. GET /api/invoices/{id}
+8. POST /api/advance-requests/quote
+9. POST /api/advance-requests
+10. GET /api/advance-requests
+11. GET /api/advance-requests/{id}
 ```
 
 ## Error Response Shape
@@ -300,53 +457,17 @@ Common error codes so far:
 | `DUPLICATE_INVOICE` | An invoice with the same fingerprint already exists. |
 | `INVOICE_NOT_FOUND` | The invoice does not exist or does not belong to the current user. |
 | `INVALID_INVOICE_TRANSITION` | The requested status transition is not allowed. |
+| `ADVANCE_NOT_ELIGIBLE` | The invoice failed quote eligibility checks. |
+| `ADVANCE_ALREADY_EXISTS` | The invoice already has an advance request. |
+| `ADVANCE_REQUEST_NOT_FOUND` | The advance request does not exist or does not belong to the current user. |
+| `INVALID_ADVANCE_TRANSITION` | The requested advance status transition is not allowed. |
+| `INVALID_FINANCING_MODEL` | A simulation was called for the wrong financing model. |
 
 ## Recommended Order For Remaining Features
 
 Build one vertical slice at a time.
 
-### 1. Advance Quote
-
-```http
-POST /api/advance-requests/quote
-```
-
-Build first because users need to see the offer before accepting it.
-
-Add:
-
-- `AdvanceCalculatorService`
-- quote request/response contracts
-- quote endpoint
-
-No database write is needed yet.
-
-### 2. Create Advance Request
-
-```http
-POST /api/advance-requests
-```
-
-Persist the accepted quote.
-
-Add:
-
-- `AdvanceRequestsController`
-- `AdvanceRequestService`
-- invoice status transition to `AdvanceRequested`
-- terms acceptance
-
-### 3. Review Scoring
-
-Add review scoring inside advance creation.
-
-Add:
-
-- `ReviewScoringService`
-- checks for documents, duplicate risk, trust score, amount limits, and due date
-- status decision such as `Approved`, `PendingReview`, or `PendingClientConfirmation`
-
-### 4. Client Confirmation
+### 1. Client Confirmation
 
 ```http
 GET  /api/client-confirmations/{token}
@@ -362,7 +483,7 @@ Add:
 - confirmation token creation
 - public confirmation endpoints
 
-### 5. Admin Review
+### 2. Admin Review
 
 ```http
 GET  /api/admin/advance-requests/pending
@@ -382,40 +503,20 @@ Add:
 - `AdminReview` records
 - manual approve/reject flow
 
-### 6. Simulated Money Movement
-
-```http
-POST /api/advance-requests/{id}/simulate-disbursement
-POST /api/advance-requests/{id}/simulate-client-payment-detected
-POST /api/advance-requests/{id}/simulate-user-repayment
-POST /api/advance-requests/{id}/simulate-client-payment-to-hassil
-POST /api/advance-requests/{id}/simulate-buffer-release
-```
-
-Build after approval exists.
-
-Add:
-
-- `LedgerService`
-- `MockOpenBankingGateway`
-- transaction creation
-- advance and invoice status transitions
-
-### 7. Trust Score Events
+### 3. Trust Score Events
 
 ```http
 GET /api/trust-score/events
 ```
 
-Build after repayment flows update trust score.
+Build this after repayment flows update trust score.
 
 Add:
 
 - `TrustScoreService`
-- score updates after successful repayment or buffer release
 - trust-score history endpoint
 
-### 8. Dashboard And Transactions
+### 4. Dashboard And Transactions
 
 ```http
 GET /api/dashboard/summary

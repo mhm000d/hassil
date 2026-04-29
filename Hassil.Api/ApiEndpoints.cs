@@ -39,4 +39,20 @@ public static class ApiEndpoints
         public const string AddDocument = $"{Base}/{{id:guid}}/documents";
         public const string Submit = $"{Base}/{{id:guid}}/submit";
     }
+
+    // -- Advance Request Endpoints -------------------------------------------
+    public static class AdvanceRequests
+    {
+        private const string Base = $"{ApiBase}/advance-requests";
+
+        public const string Quote = $"{Base}/quote";
+        public const string Create = Base;
+        public const string GetAll = Base;
+        public const string Get = $"{Base}/{{id:guid}}";
+        public const string SimulateDisbursement = $"{Base}/{{id:guid}}/simulate-disbursement";
+        public const string SimulateClientPaymentDetected = $"{Base}/{{id:guid}}/simulate-client-payment-detected";
+        public const string SimulateUserRepayment = $"{Base}/{{id:guid}}/simulate-user-repayment";
+        public const string SimulateClientPaymentToHassil = $"{Base}/{{id:guid}}/simulate-client-payment-to-hassil";
+        public const string SimulateBufferRelease = $"{Base}/{{id:guid}}/simulate-buffer-release";
+    }
 }
