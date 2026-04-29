@@ -19,7 +19,7 @@ export default function FreelancerOnboarding() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        navigate('/home/freelancer')
+        navigate('/dashboard')
     }
 
     return (

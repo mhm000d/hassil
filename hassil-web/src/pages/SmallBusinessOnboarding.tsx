@@ -20,7 +20,7 @@ export default function SmallBusinessOnboarding() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        navigate('/home/company')
+        navigate('/dashboard')
     }
 
     return (

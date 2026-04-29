@@ -17,8 +17,6 @@ import FreelancerLogin from './pages/FreelancerLogin'
 import FreelancerOnboarding from './pages/FreelancerOnboarding'
 import CompanyLogin from './pages/CompanyLogin'
 import SmallBusinessOnboarding from './pages/SmallBusinessOnboarding'
-import HomeFreelancer from './pages/HomeFreelancer'
-import HomeCompany from './pages/HomeCompany'
 
 function App() {
     return (
@@ -33,8 +31,8 @@ function App() {
                 <Route path="/login/company" element={<CompanyLogin />} />
                 <Route path="/onboarding/SmallBusiness" element={<SmallBusinessOnboarding />} />
                 <Route path="/client/confirm/:token" element={<ClientConfirmation />} />
-                <Route path="/home/freelancer" element={<HomeFreelancer />} />
-                <Route path="/home/company" element={<HomeCompany />} />
+                <Route path="/home/freelancer" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/home/company" element={<Navigate to="/dashboard" replace />} />
 
                 {/* App shell — all authenticated routes */}
                 <Route element={<AppLayout />}>
