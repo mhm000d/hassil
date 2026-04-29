@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import './FreelancerLogin.css'
 
 export default function FreelancerLogin() {
     const navigate = useNavigate()
+    const { login } = useAuth()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        navigate('/onboarding/freelancer')
+        login({ name: email.split('@')[0] || 'Freelancer', email, accountType: 'Freelancer' })
+        navigate('/dashboard')
     }
 
     return (
@@ -75,6 +78,10 @@ export default function FreelancerLogin() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                         </svg>
                         Back to Home
+                    </a>
+                    <span className="login-card__footer-sep">·</span>
+                    <a href="/onboarding/freelancer" className="login-card__back-link">
+                        New here? Create account
                     </a>
                 </div>
             </div>
