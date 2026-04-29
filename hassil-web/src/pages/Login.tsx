@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { authApi } from '../data/mockApi'
+import { useAuth } from '../hooks'
 import '../styles/Login.css'
 
 export default function Login() {
@@ -12,16 +11,15 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
-        const result = authApi.login(email, password)
-        if (!result.success || !result.user) {
-            setError(result.error ?? 'Invalid email or password.')
-            return
+        try {
+            await login({ email, password })
+            navigate('/dashboard')
+        } catch (err: any) {
+            setError(err.message || 'Invalid email or password.')
         }
-        login({ name: result.user.name, displayName: result.user.name, email: result.user.email, accountType: result.user.accountType })
-        navigate('/dashboard')
     }
 
     return (

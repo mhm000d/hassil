@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Invoice, AdvanceRequest, Transaction, User } from '../types'
-import { mockApi, mockUsers, formatCurrency, calculateQuote } from '../data/mockApi'
-import { useAuth } from '../context/AuthContext'
+import type { User } from '../types'
+import { mockUsers, formatCurrency, calculateQuote } from '../data/mockApi'
+import { useAuth, useInvoices, useAdvances, useTransactions } from '../hooks'
 import Icon from '../components/Icon'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
@@ -14,21 +13,12 @@ const seedUser: User = mockUsers[0]
 export default function Dashboard() {
     const navigate = useNavigate()
     const { user: authUser } = useAuth()
-    const [invoices, setInvoices] = useState<Invoice[]>([])
-    const [advances, setAdvances] = useState<AdvanceRequest[]>([])
-    const [transactions, setTransactions] = useState<Transaction[]>([])
+    
+    const { invoices, loading: invLoading } = useInvoices()
+    const { advances, loading: advLoading } = useAdvances()
+    const { transactions, loading: txLoading } = useTransactions()
 
-    useEffect(() => {
-        Promise.all([
-            mockApi.listInvoices(seedUser.id),
-            mockApi.listAdvanceRequests(seedUser.id),
-            mockApi.listTransactions(seedUser.id),
-        ]).then(([invRes, advRes, txRes]) => {
-            setInvoices(invRes.data)
-            setAdvances(advRes.data)
-            setTransactions(txRes.data)
-        })
-    }, [])
+    const loading = invLoading || advLoading || txLoading
 
     const model = (authUser?.accountType ?? seedUser.accountType) === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'
     const displayName = authUser?.displayName

@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks'
 import '../styles/FreelancerOnboarding.css'
 
 export default function FreelancerOnboarding() {
     const navigate = useNavigate()
-    const { login } = useAuth()
+    const { completeProfile } = useAuth()
 
     const pending = (() => {
         try { return JSON.parse(sessionStorage.getItem('hassil_pending_reg') ?? '{}') } catch { return {} }
@@ -24,9 +24,15 @@ export default function FreelancerOnboarding() {
         setForm({ ...form, [e.target.name]: e.target.value })
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        login({ name: form.fullName || pending.name || 'Freelancer', displayName: form.fullName || pending.name || 'Freelancer', email: form.email || pending.email, accountType: 'Freelancer' })
+        const email = form.email || pending.email
+        const fullName = form.fullName || pending.name || 'Freelancer'
+
+        if (email) {
+            await completeProfile({ email, displayName: fullName })
+        }
+
         sessionStorage.removeItem('hassil_pending_reg')
         navigate('/dashboard')
     }

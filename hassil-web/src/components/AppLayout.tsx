@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import Icon from './Icon'
 import Logo from './Logo'
 import { mockUsers, mockApi } from '../data/mockApi'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks'
 
 interface AppLayoutProps {
     children?: ReactNode
