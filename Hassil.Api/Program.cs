@@ -2,15 +2,11 @@ using Hassil.Api.Authentication;
 using Hassil.Api.Database;
 using Hassil.Api.Middleware;
 using Hassil.Api.Services.Auth;
-using Hassil.Api.Services.AdvanceRequests;
-using Hassil.Api.Services.AdminReviews;
-using Hassil.Api.Services.ClientConfirmations;
 using Hassil.Api.Services.Demo;
 using Hassil.Api.Services.Invoices;
-using Hassil.Api.Services.Ledger;
-using Hassil.Api.Services.Notifications;
-using Hassil.Api.Services.OpenBanking;
-using Hassil.Api.Services.TrustScores;
+using Hassil.Api.Services.Onboarding;
+using Hassil.Api.Services.Dashboard;
+using Hassil.Api.Services.Transactions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
@@ -64,21 +60,23 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDemoSeedService, DemoSeedService>();
 builder.Services.AddScoped<IInvoiceFingerprintService, InvoiceFingerprintService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
-builder.Services.AddScoped<IAdvanceCalculatorService, AdvanceCalculatorService>();
-builder.Services.AddScoped<IReviewScoringService, ReviewScoringService>();
-builder.Services.AddScoped<ILedgerService, LedgerService>();
-builder.Services.AddScoped<IMockNotificationService, MockNotificationService>();
-builder.Services.AddScoped<IOpenBankingGateway, MockOpenBankingGateway>();
-builder.Services.AddScoped<IAdvanceRequestService, AdvanceRequestService>();
-builder.Services.AddScoped<IClientConfirmationService, ClientConfirmationService>();
-builder.Services.AddScoped<IAiReviewService, AiReviewService>();
-builder.Services.AddScoped<IAdminReviewService, AdminReviewService>();
-builder.Services.AddScoped<ITrustScoreService, TrustScoreService>();
+builder.Services.AddScoped<IOnboardingService, OnboardingService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
+    app.Use((context, next) =>
+    {
+        if (context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            context.Request.Headers.Remove("Accept-Encoding");
+        }
+
+        return next();
+    });
     app.UseSwagger();
     app.UseSwaggerUI();
 }
@@ -91,5 +89,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();

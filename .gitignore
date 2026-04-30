@@ -9,20 +9,21 @@ riderModule.iml
 .env.*
 !.env.example
 
-Commerce.Api/appsettings.json
-
 # Build outputs
 *.dll
 *.deps.json
+*.exe
 
 # data sources
 *.xml
 
+# IDE and OS files
 *.DotSettings.user
 .idea/
-*.exe
+.vs/
+.vscode/
 *.suo
 *.user
 *.config
 *.runtimeconfig.json
-.vs/
+.DS_Store
