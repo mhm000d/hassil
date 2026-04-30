@@ -1,36 +1,43 @@
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { createStarterData } from '../utils/starterData'
 import '../styles/AccountType.css'
 
 export default function AccountType() {
     const navigate = useNavigate()
 
+    const startOnboarding = (accountType: 'SmallBusiness' | 'Freelancer') => {
+        sessionStorage.setItem('hassil_pending_reg', JSON.stringify(createStarterData(accountType)))
+        navigate(accountType === 'Freelancer' ? '/onboarding/freelancer' : '/onboarding/small-business')
+    }
+
     return (
         <main className="account-select-page">
             <div className="page-heading centered">
-                <h1>Choose account type</h1>
-                <p>Pick the flow that matches how the invoice will be repaid.</p>
+                <h1>Choose how you usually get paid</h1>
+                <p>Hassil turn finished work into cash easer than before</p>
             </div>
             <div className="account-select-cards">
-                <button className="account-type-card" onClick={() => navigate('/register?type=SmallBusiness')}>
+                <button className="account-type-card" onClick={() => startOnboarding('SmallBusiness')}>
                     <div className="account-type-icon blue-soft">SMB</div>
                     <h2>Small Business</h2>
-                    <p>Best when the client can confirm and pay Hassil directly.</p>
+                    <p>For teams using client invoices to cover payroll, suppliers, and operating costs.</p>
                     <ul className="account-type-features">
-                        <li>Client confirms invoice</li>
-                        <li>Client pays Hassil directly</li>
-                        <li>Settlement buffer released after payment</li>
+                        <li>Your client confirms the finished work</li>
+                        <li>You receive cash before the invoice due date</li>
+                        <li>The rest is settled after payment arrives</li>
                     </ul>
+                    <span className="account-type-action">Continue as small business</span>
                 </button>
-                <button className="account-type-card" onClick={() => navigate('/register?type=Freelancer')}>
+                <button className="account-type-card" onClick={() => startOnboarding('Freelancer')}>
                     <div className="account-type-icon gold-soft">FR</div>
                     <h2>Freelancer</h2>
-                    <p>Best when the client or platform pays you first.</p>
+                    <p>For independent workers waiting on client transfers, platform payouts, or escrow.</p>
                     <ul className="account-type-features">
-                        <li>No client notification</li>
-                        <li>Client pays freelancer normally</li>
-                        <li>Freelancer repays after payment detection</li>
+                        <li>Your client relationship stays private</li>
+                        <li>You receive cash while waiting for payout</li>
+                        <li>You settle after your payment arrives</li>
                     </ul>
+                    <span className="account-type-action">Continue as freelancer</span>
                 </button>
             </div>
             <div style={{ textAlign: 'center', marginTop: 32 }}>

@@ -1,4 +1,3 @@
-import React from 'react'
 import '../../../styles/AnimatedBackground.css'
 
 export default function AnimatedBackground() {
