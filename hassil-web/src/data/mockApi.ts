@@ -84,6 +84,20 @@ export const mockUsers: User[] = [
             registrationNumber: 'ADMIN-001',
         },
     },
+    {
+        id: 'u-easy-admin',
+        accountType: 'SmallBusiness',
+        role: 'Admin',
+        email: 'admin@hassil.io',
+        name: 'Easy Admin',
+        trustScore: 100,
+        status: 'Active',
+        createdAt: '2025-12-01T00:00:00Z',
+        smallBusinessProfile: {
+            businessName: 'Hassil Easy Admin',
+            registrationNumber: 'ADMIN-002',
+        },
+    },
 ]
 
 export const mockClients: Client[] = [
@@ -424,6 +438,26 @@ export const mockTransactions: Transaction[] = [
         description: '$2,560 sent to Mona bank account.',
         createdAt: '2026-04-07T10:00:00Z',
     },
+    {
+        id: 'tx-007',
+        userId: mockUsers[1].id,   // u-sara
+        invoiceId: 'inv-006',
+        advanceRequestId: 'adv-005',
+        type: 'AdvanceDisbursement',
+        direction: 'Credit',
+        amount: 2175,
+        description: '$2,175 sent to Sara Designs bank account.',
+        createdAt: '2026-04-09T11:00:00Z',
+    },
+    {
+        id: 'tx-008',
+        userId: mockUsers[1].id,   // u-sara
+        type: 'TrustScoreAdjustment',
+        direction: 'Internal',
+        amount: 2,
+        description: 'Account verification bonus.',
+        createdAt: '2026-02-16T08:00:00Z',
+    },
 ]
 
 export const mockTrustScoreEvents: TrustScoreEvent[] = [
@@ -442,6 +476,22 @@ export const mockTrustScoreEvents: TrustScoreEvent[] = [
         newScore: 50,
         reason: 'Repaid discounting advance after client payment detection.',
         createdAt: '2026-02-20T08:00:00Z',
+    },
+    {
+        id: 'score-003',
+        userId: mockUsers[1].id,   // u-sara
+        oldScore: 40,
+        newScore: 42,
+        reason: 'Account verified and first invoice submitted.',
+        createdAt: '2026-02-16T08:00:00Z',
+    },
+    {
+        id: 'score-004',
+        userId: mockUsers[2].id,   // u-mona
+        oldScore: 65,
+        newScore: 72,
+        reason: 'Advance disbursed successfully and on-time profile history.',
+        createdAt: '2026-04-07T10:05:00Z',
     },
 ]
 
@@ -495,6 +545,17 @@ let _adminReviews: AdminReview[] = []
 
 const STATE_KEY = 'hassil_mock_state'
 
+// BroadcastChannel lets different windows/Chrome profiles on the same origin
+// communicate — localStorage alone doesn't work across separate windows.
+const stateChannel = new BroadcastChannel('hassil_state')
+
+// When another window writes state, reload it here and fire the local event
+// so all contexts in this window refetch.
+stateChannel.onmessage = () => {
+    loadState()
+    window.dispatchEvent(new CustomEvent('hassil:state-changed'))
+}
+
 function saveState() {
     localStorage.setItem(STATE_KEY, JSON.stringify({
         invoices: _invoices,
@@ -504,6 +565,10 @@ function saveState() {
         aiSnapshots: _aiSnapshots,
         adminReviews: _adminReviews
     }))
+    // Notify all contexts in this tab that state has changed (e.g. admin decision)
+    window.dispatchEvent(new CustomEvent('hassil:state-changed'))
+    // Notify other windows/tabs (including different Chrome windows on same origin)
+    stateChannel.postMessage('state-changed')
 }
 
 function loadState() {
@@ -511,7 +576,7 @@ function loadState() {
         const saved = localStorage.getItem(STATE_KEY)
         if (saved) {
             const data = JSON.parse(saved)
-            
+
             // Helper to merge lists by ID, prioritizing saved data but keeping seed data
             const merge = <T extends { id: string }>(seeds: T[], saveds: T[]): T[] => {
                 const map = new Map<string, T>()
@@ -555,18 +620,44 @@ function ok<T>(data: T): ApiResponse<T> {
 export const mockApi = {
     // Users
     getUser(id: string): Promise<ApiResponse<User | undefined>> {
-        return Promise.resolve(ok(mockUsers.find((u) => u.id === id)))
+        return Promise.resolve(ok(authApi.me(id)))
     },
     listUsers(): Promise<ApiResponse<User[]>> {
-        return Promise.resolve(ok(mockUsers))
+        // Merge seed users with localStorage-registered users so admin sees
+        // everyone who has ever submitted an advance, not just seed data.
+        const seenIds = new Set<string>()
+        const result: User[] = []
+        for (const u of mockUsers) {
+            seenIds.add(u.id)
+            result.push(u)
+        }
+        // Pull registered users from localStorage and resolve via authApi.me
+        try {
+            const raw = localStorage.getItem('hassil_registered_users')
+            const registered: { id: string }[] = raw ? JSON.parse(raw) : []
+            for (const r of registered) {
+                if (!seenIds.has(r.id)) {
+                    const resolved = authApi.me(r.id)
+                    if (resolved) {
+                        seenIds.add(resolved.id)
+                        result.push(resolved)
+                    }
+                }
+            }
+        } catch { /* ignore */ }
+        return Promise.resolve(ok(result))
     },
 
     // Invoices
     listInvoices(userId?: string): Promise<ApiResponse<Invoice[]>> {
+        // Re-read from localStorage so cross-tab admin decisions are visible
+        loadState()
         const result = userId ? _invoices.filter((inv) => inv.userId === userId) : _invoices
         return Promise.resolve(ok(result))
     },
     getInvoice(id: string): Promise<ApiResponse<Invoice | undefined>> {
+        // Re-read from localStorage so cross-tab admin decisions are visible
+        loadState()
         return Promise.resolve(ok(_invoices.find((inv) => inv.id === id)))
     },
     createInvoice(invoice: Invoice): Promise<ApiResponse<Invoice>> {
@@ -582,10 +673,14 @@ export const mockApi = {
 
     // Advance requests
     listAdvanceRequests(userId?: string): Promise<ApiResponse<AdvanceRequest[]>> {
+        // Re-read from localStorage so cross-tab admin decisions are visible
+        loadState()
         const result = userId ? _advances.filter((adv) => adv.userId === userId) : _advances
         return Promise.resolve(ok(result))
     },
     getAdvanceRequest(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        // Re-read from localStorage so cross-tab admin decisions are visible
+        loadState()
         return Promise.resolve(ok(_advances.find((adv) => adv.id === id)))
     },
     createAdvanceRequest(advance: AdvanceRequest): Promise<ApiResponse<AdvanceRequest>> {
@@ -597,6 +692,107 @@ export const mockApi = {
         _advances = _advances.map((adv) => (adv.id === id ? { ...adv, ...patch } : adv))
         saveState()
         return Promise.resolve(ok(_advances.find((adv) => adv.id === id)))
+    },
+
+    // Quoting
+    getQuote(userId: string, invoiceId: string): Promise<ApiResponse<any>> {
+        const user = authApi.me(userId)
+        const invoice = _invoices.find(i => i.id === invoiceId)
+        if (!user || !invoice) return Promise.reject('User or Invoice not found')
+        return Promise.resolve(ok(calculateQuote(user, invoice)))
+    },
+
+    // Granular Simulations
+    async simulateDisbursement(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        const adv = _advances.find(a => a.id === id)
+        if (!adv || adv.status !== 'Approved') throw new Error('Invalid state for disbursement')
+        const now = new Date().toISOString()
+
+        await this.updateAdvanceRequest(id, { status: 'Disbursed', updatedAt: now })
+        await this.updateInvoice(adv.invoiceId, { status: 'Disbursed' })
+        await this.addTransaction({
+            id: generateId('tx'), userId: adv.userId, invoiceId: adv.invoiceId, advanceRequestId: adv.id,
+            type: 'AdvanceDisbursement', direction: 'Credit', amount: adv.advanceAmount,
+            description: 'Advance sent to bank account (Simulated).',
+            createdAt: now,
+        })
+        return ok(_advances.find(a => a.id === id))
+    },
+
+    async simulateClientPaymentDetected(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        const adv = _advances.find(a => a.id === id)
+        if (!adv || adv.status !== 'Disbursed') throw new Error('Invalid state')
+        const now = new Date().toISOString()
+        const inv = _invoices.find(i => i.id === adv.invoiceId)!
+
+        await this.updateAdvanceRequest(id, { status: 'ClientPaymentDetected', updatedAt: now })
+        await this.updateInvoice(inv.id, { status: 'ClientPaymentDetected' })
+        await this.addTransaction({
+            id: generateId('tx'), userId: adv.userId, invoiceId: inv.id, advanceRequestId: adv.id,
+            type: 'DetectedIncomingPayment', direction: 'Internal', amount: inv.amount,
+            description: 'Client payment detected in freelancer account (Simulated).', createdAt: now,
+        })
+        return ok(_advances.find(a => a.id === id))
+    },
+
+    async simulateUserRepayment(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        const adv = _advances.find(a => a.id === id)
+        if (!adv || adv.status !== 'ClientPaymentDetected') throw new Error('Invalid state')
+        const now = new Date().toISOString()
+        const inv = _invoices.find(i => i.id === adv.invoiceId)!
+
+        await this.updateAdvanceRequest(id, { status: 'Repaid', updatedAt: now })
+        await this.updateInvoice(inv.id, { status: 'Paid' })
+        await this.addTransaction({
+            id: generateId('tx'), userId: adv.userId, invoiceId: inv.id, advanceRequestId: adv.id,
+            type: 'UserRepayment', direction: 'Debit', amount: adv.expectedRepaymentAmount,
+            description: 'Advance and fee repaid after client payment (Simulated).', createdAt: now,
+        })
+        return ok(_advances.find(a => a.id === id))
+    },
+
+    async simulateClientPaidHassil(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        const adv = _advances.find(a => a.id === id)
+        if (!adv || adv.status !== 'Disbursed') throw new Error('Invalid state')
+        const now = new Date().toISOString()
+        const inv = _invoices.find(i => i.id === adv.invoiceId)!
+
+        await this.updateAdvanceRequest(id, { status: 'ClientPaidHassil', updatedAt: now })
+        await this.updateInvoice(inv.id, { status: 'ClientPaidHassil' })
+        await this.addTransaction({
+            id: generateId('tx'), userId: adv.userId, invoiceId: inv.id, advanceRequestId: adv.id,
+            type: 'ClientPaymentToHassil', direction: 'Credit', amount: inv.amount,
+            description: 'Client paid the invoice to Hassil (Simulated).', createdAt: now,
+        })
+        return ok(_advances.find(a => a.id === id))
+    },
+
+    async simulateBufferRelease(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        const adv = _advances.find(a => a.id === id)
+        if (!adv || adv.status !== 'ClientPaidHassil') throw new Error('Invalid state')
+        const now = new Date().toISOString()
+        const inv = _invoices.find(i => i.id === adv.invoiceId)!
+
+        await this.updateAdvanceRequest(id, { status: 'Repaid', updatedAt: now })
+        await this.updateInvoice(inv.id, { status: 'Paid' })
+        await this.addTransaction({
+            id: generateId('tx'), userId: adv.userId, invoiceId: inv.id, advanceRequestId: adv.id,
+            type: 'BufferRelease', direction: 'Credit', amount: adv.settlementBufferAmount,
+            description: 'Remaining buffer released (Simulated).', createdAt: now,
+        })
+        return ok(_advances.find(a => a.id === id))
+    },
+
+    // Invoice actions
+    async submitInvoice(id: string): Promise<ApiResponse<Invoice | undefined>> {
+        return this.updateInvoice(id, { status: 'Submitted' })
+    },
+
+    async addInvoiceDocument(invoiceId: string, doc: any): Promise<ApiResponse<Invoice | undefined>> {
+        const inv = _invoices.find(i => i.id === invoiceId)
+        if (!inv) throw new Error('Invoice not found')
+        const updatedDocs = [...(inv.documents || []), { ...doc, id: generateId('doc'), uploadedAt: new Date().toISOString() }]
+        return this.updateInvoice(invoiceId, { documents: updatedDocs })
     },
 
     // Transactions
@@ -632,6 +828,38 @@ export const mockApi = {
         return Promise.resolve(ok(snapshot))
     },
 
+    // Admin decision — atomically updates advance + invoice status and records the review
+    async adminDecide(advanceId: string, decision: 'Approved' | 'Rejected' | 'RequestMoreInfo', reviewerUserId: string, notes?: string): Promise<ApiResponse<{ advance: AdvanceRequest; invoice: Invoice; review: AdminReview }>> {
+        const adv = _advances.find(a => a.id === advanceId)
+        if (!adv) throw new Error(`Advance ${advanceId} not found`)
+        const inv = _invoices.find(i => i.id === adv.invoiceId)
+        if (!inv) throw new Error(`Invoice ${adv.invoiceId} not found`)
+
+        const now = new Date().toISOString()
+        const newAdvanceStatus: AdvanceRequest['status'] = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'PendingReview'
+        const newInvoiceStatus: Invoice['status'] = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'PendingReview'
+
+        _advances = _advances.map(a => a.id === advanceId ? { ...a, status: newAdvanceStatus, updatedAt: now } : a)
+        _invoices = _invoices.map(i => i.id === adv.invoiceId ? { ...i, status: newInvoiceStatus } : i)
+
+        const review: AdminReview = {
+            id: generateId('rev'),
+            advanceRequestId: advanceId,
+            reviewerUserId,
+            decision,
+            notes: notes ?? (decision === 'RequestMoreInfo' ? 'Additional evidence requested.' : 'Manual review completed.'),
+            createdAt: now,
+        }
+        _adminReviews = [review, ..._adminReviews]
+        saveState()
+
+        return Promise.resolve(ok({
+            advance: _advances.find(a => a.id === advanceId)!,
+            invoice: _invoices.find(i => i.id === adv.invoiceId)!,
+            review,
+        }))
+    },
+
     // Admin reviews
     listAdminReviews(): Promise<ApiResponse<AdminReview[]>> {
         return Promise.resolve(ok(_adminReviews))
@@ -642,6 +870,22 @@ export const mockApi = {
     },
 
     // Client confirmation
+    createClientConfirmation(invoiceId: string, clientEmail: string): Promise<ApiResponse<Invoice | undefined>> {
+        const token = generateId('confirm-token')
+        const confirmation: NonNullable<Invoice['clientConfirmation']> = {
+            id: generateId('conf'),
+            invoiceId,
+            token,
+            clientEmail,
+            status: 'Pending',
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+        _invoices = _invoices.map((inv) =>
+            inv.id === invoiceId ? { ...inv, clientConfirmation: confirmation } : inv,
+        )
+        saveState()
+        return Promise.resolve(ok(_invoices.find((inv) => inv.id === invoiceId)))
+    },
     getClientConfirmation(token: string): Promise<ApiResponse<{ invoice: Invoice; confirmation: Invoice['clientConfirmation'] } | undefined>> {
         const invoice = _invoices.find((inv) => inv.clientConfirmation?.token === token)
         if (!invoice) return Promise.resolve(ok(undefined))
@@ -667,12 +911,14 @@ export const mockApi = {
     },
 
     getDashboardSummary(userId: string): Promise<ApiResponse<any>> {
+        // Re-read from localStorage so cross-tab admin decisions are visible
+        loadState()
         const userInvoices = _invoices.filter(i => i.userId === userId)
         const userAdvances = _advances.filter(a => a.userId === userId)
-        
+
         const openInvoices = userInvoices.filter(inv => inv.status !== 'Paid' && inv.status !== 'Rejected')
         const activeAdvances = userAdvances.filter(adv => !['Repaid', 'Rejected'].includes(adv.status))
-        
+
         const summary = {
             totalOutstanding: openInvoices.reduce((sum, inv) => sum + inv.amount, 0),
             pendingAdvanceAmount: activeAdvances.reduce((sum, adv) => sum + adv.advanceAmount, 0),
@@ -685,7 +931,7 @@ export const mockApi = {
             invoiceCount: userInvoices.length,
             activeAdvanceCount: activeAdvances.length
         }
-        
+
         return Promise.resolve(ok(summary))
     }
 }
@@ -715,6 +961,45 @@ function saveRegisteredUsers(users: RegisteredUser[]) {
     localStorage.setItem(USERS_KEY, JSON.stringify(users))
 }
 
+// Seed demo users into registered users so they can log in on first launch
+const DEMO_SEED_USERS: RegisteredUser[] = [
+    {
+        id: 'u-admin',
+        email: 'admin@hassil.io',
+        passwordHash: '123456',
+        name: 'Hassil Admin',
+        displayName: 'Hassil Admin',
+        accountType: 'SmallBusiness',
+    },
+    {
+        id: 'u-ahmed',
+        email: 'employer@example.com',
+        passwordHash: '123456',
+        name: 'Amin Talahmeh',
+        displayName: 'Afyia',
+        accountType: 'SmallBusiness',
+    },
+    {
+        id: 'u-sara',
+        email: 'sara@saradesigns.io',
+        passwordHash: '123456',
+        name: 'Sara Al-Rashid',
+        displayName: 'Sara Designs',
+        accountType: 'Freelancer',
+    },
+]
+
+function ensureDemoUsersSeeded() {
+    const existing = loadRegisteredUsers()
+    const existingIds = new Set(existing.map(u => u.id))
+    const toAdd = DEMO_SEED_USERS.filter(u => !existingIds.has(u.id))
+    if (toAdd.length > 0) {
+        saveRegisteredUsers([...existing, ...toAdd])
+    }
+}
+ensureDemoUsersSeeded()
+
+
 function seedDataForUser(userId: string) {
     // 1. A past paid invoice to show history
     const pastInvoice: Invoice = {
@@ -735,7 +1020,7 @@ function seedDataForUser(userId: string) {
         createdAt: '2026-03-01T09:00:00Z',
         documents: [],
     }
-    
+
     // 2. A new open invoice to show in the list and allow advances
     const openInvoice: Invoice = {
         id: generateId('inv'),
@@ -792,27 +1077,20 @@ export const authApi = {
         }
         const newUser = { ...userData, id: generateId('u') }
         saveRegisteredUsers([...users, newUser])
-        
+
         // Seed some mock data for the new account so the dashboard isn't empty
         seedDataForUser(newUser.id)
-        
+
         return { success: true, user: newUser }
     },
 
     login(email: string, password: string): { success: boolean; user?: RegisteredUser | User; error?: string } {
         const users = loadRegisteredUsers()
-        const foundReg = users.find(
+        const found = users.find(
             (u) => u.email.toLowerCase() === email.toLowerCase() && u.passwordHash === password,
         )
-        if (foundReg) {
-            return { success: true, user: foundReg }
-        }
-
-        const foundSeed = mockUsers.find(
-            (u) => u.email.toLowerCase() === email.toLowerCase() && password === '123456' // Default password for seeds
-        )
-        if (foundSeed) {
-            return { success: true, user: foundSeed }
+        if (found) {
+            return { success: true, user: found }
         }
 
         return { success: false, error: 'Invalid email or password.' }
@@ -822,7 +1100,7 @@ export const authApi = {
         // Try to find in registered users (localStorage)
         const users = loadRegisteredUsers()
         const regUser = users.find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase())
-        
+
         // Try to find in seed data
         const seedUser = mockUsers.find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase())
 
@@ -890,8 +1168,8 @@ export function getStatusLabel(status: string): string {
         Submitted: 'Submitted',
         AdvanceRequested: 'Advance requested',
         PendingClientConfirmation: 'Awaiting client',
-        Confirmed: 'Confirmed',
-        Disputed: 'Disputed',
+        Confirmed: 'Client confirmed',
+        Disputed: 'Client disputed',
         PendingReview: 'Pending review',
         Approved: 'Approved',
         Disbursed: 'Funded',
@@ -907,8 +1185,8 @@ export function getStatusLabel(status: string): string {
 
 export function getStatusColor(status: string): string {
     if (['Paid', 'Approved', 'Repaid', 'BufferReleased', 'Confirmed'].includes(status)) return 'status-success'
-    if (['PendingClientConfirmation', 'PendingReview', 'ClientPaymentDetected', 'ClientPaidHassil'].includes(status)) return 'status-pending'
-    if (['Submitted', 'AdvanceRequested', 'Disbursed'].includes(status)) return 'status-warning'
+    if (['PendingClientConfirmation', 'PendingReview', 'ClientPaymentDetected', 'ClientPaidHassil', 'AdvanceRequested'].includes(status)) return 'status-pending'
+    if (['Submitted', 'Disbursed'].includes(status)) return 'status-warning'
     if (['Rejected', 'Disputed'].includes(status)) return 'status-error'
     return 'status-draft'
 }
@@ -977,7 +1255,7 @@ export function scoreAdvance(user: User, invoice: Invoice, hasEvidence: boolean,
 
 export function getReviewFlags(user: User, invoice: Invoice, score: number): string[] {
     const flags: string[] = []
-    if (invoice.documents.length === 0) flags.push('Supporting document is missing')
+    if ((invoice.documents?.length ?? 0) === 0) flags.push('Supporting document is missing')
     if (score < 75) flags.push(`Review score below auto-approve threshold (${score}/100)`)
     if (user.trustScore < 50) flags.push('Trust score below recommended threshold')
     if (invoice.amount > 20000) flags.push('Invoice amount exceeds standard limit')

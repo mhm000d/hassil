@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { User } from '../types'
 import { mockUsers, formatCurrency, calculateQuote } from '../data/mockApi'
@@ -13,11 +14,18 @@ const seedUser: User = mockUsers[0]
 export default function Dashboard() {
     const navigate = useNavigate()
     const { user: authUser } = useAuth()
-    
-    const { invoices } = useInvoices()
-    const { advances } = useAdvances()
-    const { transactions } = useTransactions()
 
+    const { invoices, refetch: refetchInvoices } = useInvoices()
+    const { advances, refetch: refetchAdvances } = useAdvances()
+    const { transactions, refetch: refetchTransactions } = useTransactions()
+
+    // Refresh all data when the dashboard mounts so it always reflects
+    // the latest state (e.g. after an admin decision on another tab).
+    useEffect(() => {
+        refetchInvoices()
+        refetchAdvances()
+        refetchTransactions()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     const model = (authUser?.accountType ?? seedUser.accountType) === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'
     const displayName = authUser?.displayName
@@ -27,7 +35,9 @@ export default function Dashboard() {
         ?? seedUser.email
 
     const openInvoices = invoices.filter((inv) => inv.status !== 'Paid' && inv.status !== 'Rejected')
-    const availableNow = openInvoices.reduce((sum, inv) => sum + calculateQuote(authUser || seedUser, inv).advanceAmount, 0)
+    // Only invoices without an existing advance are truly "available to advance"
+    const eligibleInvoices = openInvoices.filter((inv) => !inv.advanceRequestId)
+    const availableNow = eligibleInvoices.reduce((sum, inv) => sum + calculateQuote(authUser || seedUser, inv).advanceAmount, 0)
     const outstanding = openInvoices.reduce((sum, inv) => sum + inv.amount, 0)
 
     const activeAdvances = advances.filter((adv) => !['Repaid', 'Rejected'].includes(adv.status))
@@ -38,7 +48,7 @@ export default function Dashboard() {
         .reduce((sum, tx) => sum + tx.amount, 0)
 
     const recentTx = transactions.slice(0, 5)
-    const firstOpenInvoice = openInvoices.find((inv) => !inv.advanceRequestId) ?? openInvoices[0]
+    const firstOpenInvoice = eligibleInvoices[0] ?? openInvoices[0]
 
     return (
         <>
@@ -49,7 +59,7 @@ export default function Dashboard() {
                 <div className="hero-main-card">
                     <div className="hero-card-label">Available to advance</div>
                     <strong>{formatCurrency(availableNow)}</strong>
-                    <p>{openInvoices.length} open receivables eligible under current trust limits.</p>
+                    <p>{eligibleInvoices.length} open receivable{eligibleInvoices.length === 1 ? '' : 's'} eligible under current trust limits.</p>
                     <button
                         className="btn btn-secondary btn-sm"
                         onClick={() =>

@@ -1,6 +1,7 @@
-import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useState, useEffect, useCallback, useContext, type ReactNode } from 'react'
 import type { Invoice } from '../types'
 import { InvoiceService } from '../services'
+import { AuthContext } from './AuthContext'
 
 interface InvoiceContextValue {
     invoices: Invoice[]
@@ -10,6 +11,9 @@ interface InvoiceContextValue {
     get: (id: string) => Promise<Invoice | undefined>
     create: (invoice: Invoice) => Promise<Invoice>
     update: (id: string, patch: Partial<Invoice>) => Promise<Invoice | undefined>
+    submit: (id: string) => Promise<Invoice | undefined>
+    addDocument: (id: string, doc: { fileName: string; documentType: string }) => Promise<Invoice | undefined>
+    createClientConfirmation: (id: string, clientEmail: string) => Promise<Invoice | undefined>
 }
 
 export const InvoiceContext = createContext<InvoiceContextValue>({
@@ -20,9 +24,13 @@ export const InvoiceContext = createContext<InvoiceContextValue>({
     get: async () => undefined,
     create: async (i) => i,
     update: async () => undefined,
+    submit: async () => undefined,
+    addDocument: async () => undefined,
+    createClientConfirmation: async () => undefined,
 })
 
 export function InvoiceProvider({ children }: { children: ReactNode }) {
+    const { user } = useContext(AuthContext)
     const [invoices, setInvoices] = useState<Invoice[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -40,8 +48,27 @@ export function InvoiceProvider({ children }: { children: ReactNode }) {
         }
     }, [])
 
+    // Re-fetch whenever the logged-in user changes (login, logout, account switch)
     useEffect(() => {
         fetchInvoices()
+    }, [fetchInvoices, user?.id])
+
+    // Silently refetch when the tab regains focus — picks up admin decisions
+    // made in another tab without requiring a manual page refresh.
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') fetchInvoices()
+        }
+        document.addEventListener('visibilitychange', onVisible)
+        return () => document.removeEventListener('visibilitychange', onVisible)
+    }, [fetchInvoices])
+
+    // Pick up admin decisions made in the same tab via a custom event
+    // dispatched by the mock API after every saveState() call.
+    useEffect(() => {
+        const onStateChange = () => fetchInvoices()
+        window.addEventListener('hassil:state-changed', onStateChange)
+        return () => window.removeEventListener('hassil:state-changed', onStateChange)
     }, [fetchInvoices])
 
     const get = async (id: string) => {
@@ -60,8 +87,26 @@ export function InvoiceProvider({ children }: { children: ReactNode }) {
         return res
     }
 
+    const submit = async (id: string) => {
+        const res = await InvoiceService.submit(id)
+        await fetchInvoices()
+        return res
+    }
+
+    const addDocument = async (id: string, doc: { fileName: string; documentType: string }) => {
+        const res = await InvoiceService.addDocument(id, doc)
+        await fetchInvoices()
+        return res
+    }
+
+    const createClientConfirmation = async (id: string, clientEmail: string) => {
+        const res = await InvoiceService.createClientConfirmation(id, clientEmail)
+        await fetchInvoices()
+        return res
+    }
+
     return (
-        <InvoiceContext.Provider value={{ invoices, loading, error, refetch: fetchInvoices, get, create, update }}>
+        <InvoiceContext.Provider value={{ invoices, loading, error, refetch: fetchInvoices, get, create, update, submit, addDocument, createClientConfirmation }}>
             {children}
         </InvoiceContext.Provider>
     )

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatCurrency, formatDate } from '../data/mockApi'
 import { useInvoices } from '../hooks'
@@ -8,7 +9,13 @@ import Icon from '../components/Icon'
 
 export default function Invoices() {
     const navigate = useNavigate()
-    const { invoices } = useInvoices()
+    const { invoices, refetch } = useInvoices()
+
+    // Always fetch fresh data when this page mounts so admin decisions
+    // (approve / reject) are immediately visible to the invoice owner.
+    useEffect(() => {
+        refetch()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <>

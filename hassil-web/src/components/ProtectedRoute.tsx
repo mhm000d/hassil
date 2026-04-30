@@ -1,15 +1,14 @@
 import { Navigate, Outlet } from 'react-router-dom'
-import { useAuth } from '../hooks'
+import { useAuth, AuthStatus } from '../hooks'
 
 export default function ProtectedRoute() {
-    const { user, isInitialized } = useAuth()
+    const { authStatus, isInitialized } = useAuth()
 
     if (!isInitialized) {
-        // Could return a loading spinner here
         return null
     }
 
-    if (!user) {
+    if (authStatus === AuthStatus.LOGGED_OUT || authStatus === AuthStatus.ERROR) {
         return <Navigate to="/login" replace />
     }
 

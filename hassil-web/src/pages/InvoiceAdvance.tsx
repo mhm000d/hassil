@@ -4,7 +4,6 @@ import type { AdvanceRequest, Invoice } from '../types'
 import {
     generateId,
     formatCurrency,
-    calculateQuote,
     scoreAdvance,
     getReviewFlags,
 } from '../data/mockApi'
@@ -28,58 +27,98 @@ export default function InvoiceAdvance() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { user: currentUser } = useAuth()
-    const { get: getInvoice, update: updateInvoice } = useInvoices()
-    const { create: createAdvance } = useAdvances()
+    const { get: getInvoice, update: updateInvoice, createClientConfirmation, refetch: refetchInvoices } = useInvoices()
+    const { create: createAdvance, getQuote } = useAdvances()
 
     const [invoice, setInvoice] = useState<Invoice | null>(null)
+    const [quote, setQuote] = useState<any>(null)
     const [accepted, setAccepted] = useState(false)
     const [submitting, setSubmitting] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        if (id) getInvoice(id).then((res) => setInvoice(res ?? null))
-    }, [id, getInvoice])
+        if (!id) return
+        setLoading(true)
+        setError(null)
+        refetchInvoices()
+            .then(() => getInvoice(id))
+            .then((res) => {
+                if (!res) {
+                    setError('Invoice not found')
+                    return
+                }
+                setInvoice(res)
+                return getQuote(res.id).then(q => setQuote(q))
+            })
+            .catch(err => setError(err.message || 'Failed to load invoice'))
+            .finally(() => setLoading(false))
+    }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (!invoice) {
+    if (loading) {
+        return <div className="loading-state">Loading quote...</div>
+    }
+
+    if (error || !invoice || !quote) {
         return (
             <div className="card">
-                <h2 className="card-title">Invoice not found</h2>
+                <h2 className="card-title">{error ?? 'Invoice not found'}</h2>
                 <button className="btn btn-primary mt-16" onClick={() => navigate('/invoices')}>Back to invoices</button>
             </div>
         )
     }
 
     const actualUser = currentUser || { id: 'user-0', name: 'Demo User' } as any
-    const quote = calculateQuote(actualUser, invoice)
     const duplicate = false
-    const score = scoreAdvance(actualUser, invoice, invoice.documents.length > 0, duplicate)
+    const score = scoreAdvance(actualUser, invoice, (invoice.documents?.length ?? 0) > 0, duplicate)
     const flags = getReviewFlags(actualUser, invoice, score)
+    const needsClientConfirmation = quote.clientNotificationRequired
 
     const submit = async () => {
         if (!accepted || submitting) return
         setSubmitting(true)
-        const advanceId = generateId('adv')
-        const advance: Partial<AdvanceRequest> = {
-            id: advanceId,
-            invoiceId: invoice.id,
-            financingModel: quote.financingModel,
-            repaymentParty: quote.repaymentParty,
-            clientNotificationRequired: quote.clientNotificationRequired,
-            requestedPercent: quote.requestedPercent,
-            advanceAmount: quote.advanceAmount,
-            feeRate: quote.feeRate,
-            feeAmount: quote.feeAmount,
-            settlementBufferAmount: quote.settlementBufferAmount,
-            expectedRepaymentAmount: quote.expectedRepaymentAmount,
-            reviewScore: score,
-            approvalMode: score >= 75 ? 'Auto' : 'Manual',
-            status: score >= 75 ? 'Approved' : 'PendingReview',
-            termsAcceptedAt: new Date().toISOString(),
+        try {
+            const advanceId = generateId('adv')
+
+            const advance: Partial<AdvanceRequest> = {
+                id: advanceId,
+                invoiceId: invoice.id,
+                financingModel: quote.financingModel,
+                repaymentParty: quote.repaymentParty,
+                clientNotificationRequired: quote.clientNotificationRequired,
+                requestedPercent: quote.requestedPercent,
+                advanceAmount: quote.advanceAmount,
+                feeRate: quote.feeRate,
+                feeAmount: quote.feeAmount,
+                settlementBufferAmount: quote.settlementBufferAmount,
+                expectedRepaymentAmount: quote.expectedRepaymentAmount,
+                reviewScore: score,
+                approvalMode: 'Manual',
+                // Factoring requires client confirmation before admin review
+                status: needsClientConfirmation ? 'PendingClientConfirmation' : 'PendingReview',
+                termsAcceptedAt: new Date().toISOString(),
+            }
+
+            await createAdvance(advance as AdvanceRequest)
+            await updateInvoice(invoice.id, {
+                advanceRequestId: advanceId,
+                status: needsClientConfirmation ? 'PendingClientConfirmation' : 'PendingReview',
+            })
+
+            // For factoring: create the client confirmation token so InvoiceDetail
+            // can show the "Send to client" panel when the user lands back there.
+            if (needsClientConfirmation) {
+                await createClientConfirmation(invoice.id, invoice.client.email)
+            }
+
+            // Always return to the invoice detail page
+            navigate(`/invoices/${invoice.id}`)
+        } finally {
+            setSubmitting(false)
         }
-        await createAdvance(advance as AdvanceRequest)
-        await updateInvoice(invoice.id, { advanceRequestId: advanceId, status: advance.status === 'Approved' ? 'Approved' : 'PendingReview' })
-        navigate(`/advances/${advanceId}`)
     }
 
+    // ── Quote page ───────────────────────────────────────────────────────────
     return (
         <>
             <Breadcrumbs
@@ -105,10 +144,6 @@ export default function InvoiceAdvance() {
                             <QuoteItem label="Settlement buffer" value={formatCurrency(quote.settlementBufferAmount, invoice.currency)} />
                             <QuoteItem label="Fee rate" value={`${(quote.feeRate * 100).toFixed(1)}%`} />
                         </div>
-                        <div className="quote-disclaimer">
-                            Fixed upfront fee.{' '}
-                            {quote.clientNotificationRequired ? 'Client confirmation is required.' : 'Client is not notified.'}
-                        </div>
                     </div>
                     <div className="card mt-24">
                         <h2 className="card-title">Terms</h2>
@@ -122,7 +157,8 @@ export default function InvoiceAdvance() {
                             onClick={submit}
                             disabled={!accepted || submitting}
                         >
-                            <Icon name="advance" /> Submit Advance Request
+                            <Icon name="advance" />
+                            {submitting ? 'Submitting...' : 'Submit Advance Request'}
                         </button>
                     </div>
                 </div>
@@ -130,7 +166,7 @@ export default function InvoiceAdvance() {
                     <h2 className="card-title">Checks</h2>
                     <div className="verification-list mt-16">
                         {[
-                            { label: 'Supporting document attached', ok: invoice.documents.length > 0 },
+                            { label: 'Supporting document attached', ok: (invoice.documents?.length ?? 0) > 0 },
                             { label: `Amount within ${formatCurrency(quote.maxEligibleInvoiceAmount, invoice.currency)} limit`, ok: invoice.amount <= quote.maxEligibleInvoiceAmount },
                             { label: 'Due date is in the future', ok: new Date(invoice.dueDate).getTime() > Date.now() },
                         ].map((check) => (

@@ -1,12 +1,13 @@
 import { api } from './apiClient'
-import type { AdminReview, AdvanceRequest, Invoice, AiReviewSnapshot } from '../types'
+import type { AdminReview, AdvanceRequest, Invoice, AiReviewSnapshot, User } from '../types'
 
 export const AdminService = {
     getReviewData: async () => {
         return await Promise.all([
             api.get<AdvanceRequest[]>('/admin/advances'),
             api.get<Invoice[]>('/admin/invoices'),
-            api.get<AiReviewSnapshot[]>('/admin/ai-snapshots')
+            api.get<AiReviewSnapshot[]>('/admin/ai-snapshots'),
+            api.get<User[]>('/users'),
         ])
     },
 
@@ -22,6 +23,14 @@ export const AdminService = {
         return await api.get<AiReviewSnapshot[]>('/admin/ai-snapshots')
     },
 
+    // Single atomic endpoint — updates advance + invoice + records review in one call
+    decide: async (advanceId: string, decision: AdminReview['decision'], reviewerUserId: string, notes?: string) => {
+        return await api.post<{ advance: AdvanceRequest; invoice: Invoice; review: AdminReview }>(
+            `/admin/advances/${advanceId}/decide`,
+            { decision, reviewerUserId, notes }
+        )
+    },
+
     updateAdvance: async (id: string, patch: Partial<AdvanceRequest>) => {
         return await api.patch<AdvanceRequest>(`/advances/${id}`, patch)
     },
@@ -32,5 +41,9 @@ export const AdminService = {
 
     addReview: async (review: Omit<AdminReview, 'id' | 'createdAt'>) => {
         return await api.post<AdminReview>('/admin-reviews', review)
+    },
+
+    generateAiReview: async (advanceId: string) => {
+        return await api.post<AiReviewSnapshot>(`/admin/advance-requests/${advanceId}/ai-review`)
     }
 }

@@ -13,5 +13,14 @@ export const InvoiceService = {
     },
     update: async (id: string, patch: Partial<Invoice>) => {
         return await api.patch<Invoice>(`/invoices/${id}`, patch)
+    },
+    submit: async (id: string) => {
+        return await api.post<Invoice>(`/invoices/${id}/submit`)
+    },
+    addDocument: async (id: string, doc: { fileName: string; documentType: string }) => {
+        return await api.post<Invoice>(`/invoices/${id}/documents`, doc)
+    },
+    createClientConfirmation: async (id: string, clientEmail: string) => {
+        return await api.post<Invoice>(`/invoices/${id}/client-confirmation`, { clientEmail })
     }
 }
