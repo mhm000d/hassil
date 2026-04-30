@@ -11,7 +11,6 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddAuthentication(DemoBearerAuthenticationDefaults.Scheme)
     .AddScheme<AuthenticationSchemeOptions, DemoBearerAuthenticationHandler>(
@@ -63,7 +62,6 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
