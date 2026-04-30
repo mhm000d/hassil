@@ -53,6 +53,24 @@ export function InvoiceProvider({ children }: { children: ReactNode }) {
         fetchInvoices()
     }, [fetchInvoices, user?.id])
 
+    // Silently refetch when the tab regains focus — picks up admin decisions
+    // made in another tab without requiring a manual page refresh.
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') fetchInvoices()
+        }
+        document.addEventListener('visibilitychange', onVisible)
+        return () => document.removeEventListener('visibilitychange', onVisible)
+    }, [fetchInvoices])
+
+    // Pick up admin decisions made in the same tab via a custom event
+    // dispatched by the mock API after every saveState() call.
+    useEffect(() => {
+        const onStateChange = () => fetchInvoices()
+        window.addEventListener('hassil:state-changed', onStateChange)
+        return () => window.removeEventListener('hassil:state-changed', onStateChange)
+    }, [fetchInvoices])
+
     const get = async (id: string) => {
         return await InvoiceService.get(id)
     }

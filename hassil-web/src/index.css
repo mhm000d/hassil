@@ -832,9 +832,19 @@ a {
 }
 
 .btn-sim {
-  background: #111827;
+  background: #1d4ed8;
   color: #fff;
-  border-color: #111827;
+  border-color: #1d4ed8;
+  padding: 7px 13px;
+  min-height: 31px;
+  font-size: 12px;
+  display: block;
+  margin: 8px auto 0;
+}
+
+.btn-sim:hover {
+  background: #1e40af;
+  border-color: #1e40af;
 }
 
 .btn-sm {

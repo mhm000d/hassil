@@ -94,12 +94,16 @@ export default function InvoiceAdvance() {
                 expectedRepaymentAmount: quote.expectedRepaymentAmount,
                 reviewScore: score,
                 approvalMode: 'Manual',
-                status: 'PendingReview',
+                // Factoring requires client confirmation before admin review
+                status: needsClientConfirmation ? 'PendingClientConfirmation' : 'PendingReview',
                 termsAcceptedAt: new Date().toISOString(),
             }
 
             await createAdvance(advance as AdvanceRequest)
-            await updateInvoice(invoice.id, { advanceRequestId: advanceId, status: 'PendingReview' })
+            await updateInvoice(invoice.id, {
+                advanceRequestId: advanceId,
+                status: needsClientConfirmation ? 'PendingClientConfirmation' : 'PendingReview',
+            })
 
             // For factoring: create the client confirmation token so InvoiceDetail
             // can show the "Send to client" panel when the user lands back there.

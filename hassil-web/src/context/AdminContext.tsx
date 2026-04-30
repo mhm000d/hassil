@@ -11,6 +11,7 @@ interface AdminContextValue {
     loading: boolean
     error: string | null
     refetch: () => Promise<void>
+    silentRefetch: () => Promise<void>
     getAiSnapshot: (advanceId: string) => Promise<AiReviewSnapshot | undefined>
     decide: (advanceId: string, decision: AdminReview['decision'], reviewerUserId: string, notes?: string) => Promise<void>
     updateAdvance: (id: string, patch: Partial<AdvanceRequest>) => Promise<AdvanceRequest | undefined>
@@ -45,9 +46,38 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         }
     }, [])
 
+    // Silent version — refreshes data without triggering the loading spinner
+    const silentRefetch = useCallback(async () => {
+        try {
+            const [advs, invs, aiSnaps, usrs] = await AdminService.getReviewData()
+            setAdvances(advs)
+            setInvoices(invs)
+            setAiSnapshots(aiSnaps)
+            setUsers(usrs)
+        } catch {
+            // silently ignore
+        }
+    }, [])
+
     useEffect(() => {
         fetchAll()
     }, [fetchAll])
+
+    // Pick up advances/invoices created by users while admin tab was in background
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') silentRefetch()
+        }
+        document.addEventListener('visibilitychange', onVisible)
+        return () => document.removeEventListener('visibilitychange', onVisible)
+    }, [silentRefetch])
+
+    // Pick up new invoices/advances created by users in the same tab
+    useEffect(() => {
+        const onStateChange = () => silentRefetch()
+        window.addEventListener('hassil:state-changed', onStateChange)
+        return () => window.removeEventListener('hassil:state-changed', onStateChange)
+    }, [silentRefetch])
 
     const getAiSnapshot = async (advanceId: string) => {
         return await api.get<AiReviewSnapshot>(`/ai-snapshots/${advanceId}`)
@@ -93,6 +123,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             loading,
             error,
             refetch: fetchAll,
+            silentRefetch,
             getAiSnapshot,
             decide,
             updateAdvance,

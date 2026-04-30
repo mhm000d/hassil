@@ -9,20 +9,20 @@ export interface Tokens {
 }
 
 export const getStoredTokens = (): Tokens | null => {
-    const tokensJson = localStorage.getItem(TOKEN_KEY)
+    const tokensJson = sessionStorage.getItem(TOKEN_KEY)
     return tokensJson ? JSON.parse(tokensJson) : null
 }
 
 export const updateAuthTokens = (tokens: Tokens | null): void => {
     if (!tokens) {
-        localStorage.removeItem(TOKEN_KEY)
+        sessionStorage.removeItem(TOKEN_KEY)
         return
     }
     try {
-        localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens))
+        sessionStorage.setItem(TOKEN_KEY, JSON.stringify(tokens))
     } catch (error) {
         console.error('Failed to update auth tokens:', error)
-        localStorage.removeItem(TOKEN_KEY)
+        sessionStorage.removeItem(TOKEN_KEY)
     }
 }
 

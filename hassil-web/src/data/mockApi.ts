@@ -545,6 +545,17 @@ let _adminReviews: AdminReview[] = []
 
 const STATE_KEY = 'hassil_mock_state'
 
+// BroadcastChannel lets different windows/Chrome profiles on the same origin
+// communicate — localStorage alone doesn't work across separate windows.
+const stateChannel = new BroadcastChannel('hassil_state')
+
+// When another window writes state, reload it here and fire the local event
+// so all contexts in this window refetch.
+stateChannel.onmessage = () => {
+    loadState()
+    window.dispatchEvent(new CustomEvent('hassil:state-changed'))
+}
+
 function saveState() {
     localStorage.setItem(STATE_KEY, JSON.stringify({
         invoices: _invoices,
@@ -554,6 +565,10 @@ function saveState() {
         aiSnapshots: _aiSnapshots,
         adminReviews: _adminReviews
     }))
+    // Notify all contexts in this tab that state has changed (e.g. admin decision)
+    window.dispatchEvent(new CustomEvent('hassil:state-changed'))
+    // Notify other windows/tabs (including different Chrome windows on same origin)
+    stateChannel.postMessage('state-changed')
 }
 
 function loadState() {
@@ -635,10 +650,14 @@ export const mockApi = {
 
     // Invoices
     listInvoices(userId?: string): Promise<ApiResponse<Invoice[]>> {
+        // Re-read from localStorage so cross-tab admin decisions are visible
+        loadState()
         const result = userId ? _invoices.filter((inv) => inv.userId === userId) : _invoices
         return Promise.resolve(ok(result))
     },
     getInvoice(id: string): Promise<ApiResponse<Invoice | undefined>> {
+        // Re-read from localStorage so cross-tab admin decisions are visible
+        loadState()
         return Promise.resolve(ok(_invoices.find((inv) => inv.id === id)))
     },
     createInvoice(invoice: Invoice): Promise<ApiResponse<Invoice>> {
@@ -654,10 +673,14 @@ export const mockApi = {
 
     // Advance requests
     listAdvanceRequests(userId?: string): Promise<ApiResponse<AdvanceRequest[]>> {
+        // Re-read from localStorage so cross-tab admin decisions are visible
+        loadState()
         const result = userId ? _advances.filter((adv) => adv.userId === userId) : _advances
         return Promise.resolve(ok(result))
     },
     getAdvanceRequest(id: string): Promise<ApiResponse<AdvanceRequest | undefined>> {
+        // Re-read from localStorage so cross-tab admin decisions are visible
+        loadState()
         return Promise.resolve(ok(_advances.find((adv) => adv.id === id)))
     },
     createAdvanceRequest(advance: AdvanceRequest): Promise<ApiResponse<AdvanceRequest>> {
@@ -888,6 +911,8 @@ export const mockApi = {
     },
 
     getDashboardSummary(userId: string): Promise<ApiResponse<any>> {
+        // Re-read from localStorage so cross-tab admin decisions are visible
+        loadState()
         const userInvoices = _invoices.filter(i => i.userId === userId)
         const userAdvances = _advances.filter(a => a.userId === userId)
 
@@ -1143,8 +1168,8 @@ export function getStatusLabel(status: string): string {
         Submitted: 'Submitted',
         AdvanceRequested: 'Advance requested',
         PendingClientConfirmation: 'Awaiting client',
-        Confirmed: 'Confirmed',
-        Disputed: 'Disputed',
+        Confirmed: 'Client confirmed',
+        Disputed: 'Client disputed',
         PendingReview: 'Pending review',
         Approved: 'Approved',
         Disbursed: 'Funded',
@@ -1160,8 +1185,8 @@ export function getStatusLabel(status: string): string {
 
 export function getStatusColor(status: string): string {
     if (['Paid', 'Approved', 'Repaid', 'BufferReleased', 'Confirmed'].includes(status)) return 'status-success'
-    if (['PendingClientConfirmation', 'PendingReview', 'ClientPaymentDetected', 'ClientPaidHassil'].includes(status)) return 'status-pending'
-    if (['Submitted', 'AdvanceRequested', 'Disbursed'].includes(status)) return 'status-warning'
+    if (['PendingClientConfirmation', 'PendingReview', 'ClientPaymentDetected', 'ClientPaidHassil', 'AdvanceRequested'].includes(status)) return 'status-pending'
+    if (['Submitted', 'Disbursed'].includes(status)) return 'status-warning'
     if (['Rejected', 'Disputed'].includes(status)) return 'status-error'
     return 'status-draft'
 }

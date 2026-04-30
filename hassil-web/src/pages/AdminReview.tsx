@@ -58,17 +58,17 @@ export default function AdminReview() {
         aiSnapshots,
         users,
         loading,
-        refetch,
+        silentRefetch,
         decide,
     } = useAdmin()
 
     const [filter, setFilter] = useState('All')
     const [deciding, setDeciding] = useState(false)
 
-    // Always pull fresh data on mount — picks up any advances submitted since
-    // the admin context was last populated (fixes the user/admin disconnection).
+    // Silently refresh on mount to pick up any advances created since the
+    // admin context was last populated, without showing the loading spinner.
     useEffect(() => {
-        refetch()
+        silentRefetch()
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Resolve a userId to a User object using the context users list (which
@@ -238,8 +238,7 @@ export default function AdminReview() {
                     rows={queue.map((adv) => {
                         const inv = invoices.find((i) => i.id === adv.invoiceId)
                         const usr = resolveUser(adv.userId)
-                        // Skip rows where we can't resolve the invoice — user is shown as fallback
-                        if (!inv) return []
+                        if (!inv) return null
                         const label = usr ? userLabel(usr) : adv.userId
                         return [
                             label,
@@ -252,7 +251,7 @@ export default function AdminReview() {
                                 <Icon name="review" /> Review
                             </button>,
                         ]
-                    })}
+                    }).filter((row): row is NonNullable<typeof row> => row !== null)}
                 />
             </div>
         </>

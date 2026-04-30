@@ -59,6 +59,25 @@ export function AdvanceProvider({ children }: { children: ReactNode }) {
         fetchAdvances()
     }, [fetchAdvances, user?.id])
 
+    // Silently refetch when the tab regains focus — picks up admin decisions
+    // made in another tab without requiring a manual page refresh.
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') fetchAdvances()
+        }
+        document.addEventListener('visibilitychange', onVisible)
+        return () => document.removeEventListener('visibilitychange', onVisible)
+    }, [fetchAdvances])
+
+    // Pick up admin decisions made in the same tab via localStorage writes.
+    // The 'storage' event only fires for cross-tab changes, so we use a
+    // custom event dispatched by the mock API after every saveState() call.
+    useEffect(() => {
+        const onStateChange = () => fetchAdvances()
+        window.addEventListener('hassil:state-changed', onStateChange)
+        return () => window.removeEventListener('hassil:state-changed', onStateChange)
+    }, [fetchAdvances])
+
     const get = async (id: string) => {
         return await AdvanceService.get(id)
     }

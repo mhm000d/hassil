@@ -67,15 +67,14 @@ export default function AdvanceDetail() {
     const { advances, refetch: refetchAdvances,
             simulateDisbursement, simulateClientPaymentDetected,
             simulateUserRepayment, simulateClientPaidHassil,
-            simulateBufferRelease, update: updateAdvance } = useAdvances()
-    const { invoices, update: updateInvoice, refetch: refetchInvoices } = useInvoices()
+            simulateBufferRelease } = useAdvances()
+    const { invoices, refetch: refetchInvoices } = useInvoices()
     const { refetch: refetchTransactions } = useTransactions()
     const { getAiSnapshot } = useAdmin()
 
     const [aiSnapshot, setAiSnapshot] = useState<AiReviewSnapshot | null>(null)
     const [simulating, setSimulating] = useState(false)
     const [loading, setLoading] = useState(true)
-    const [sendSimulated, setSendSimulated] = useState(false)
 
     // Derive advance and invoice directly from context arrays — no local copies needed
     const advance = advances.find((a) => a.id === id) ?? null
@@ -133,9 +132,8 @@ export default function AdvanceDetail() {
 
     const nextLabel = getNextSimulationLabel(advance.status, advance.financingModel)
 
-    const confirmPending = invoice.clientConfirmation?.status === 'Pending'
-    const notSentYet = advance.status === 'PendingReview' && confirmPending
-    const awaitingClient = advance.status === 'PendingClientConfirmation' && confirmPending
+    // Factoring advance waiting for client — show the send/preview panel
+    const awaitingClient = advance.status === 'PendingClientConfirmation' && !!invoice.clientConfirmation
 
     return (
         <>
@@ -147,7 +145,7 @@ export default function AdvanceDetail() {
                 ]}
             />
             <PageHeading title="Advance" description={`${invoice.invoiceNumber} · ${getModelLabel(advance.financingModel)}`} />
-            <LifecycleStepper status={advance.status} model={advance.financingModel} />
+            <LifecycleStepper status={advance.status} model={advance.financingModel} clientConfirmed={invoice.clientConfirmation?.status === 'Confirmed'} />
             <section className="stat-grid">
                 <StatCard tone="gold" label="Invoice amount" value={formatCurrency(invoice.amount, invoice.currency)} sub={invoice.invoiceNumber} />
                 <StatCard tone="green" label="Advance amount" value={formatCurrency(advance.advanceAmount, invoice.currency)} sub={`${Math.round(advance.requestedPercent * 100)}% requested`} />
@@ -184,66 +182,36 @@ export default function AdvanceDetail() {
                     {/* ── Action panel ── */}
                     <div className="disclosure-panel">
                         <h2 className="card-title">Next step</h2>
-                        {notSentYet && (
+                        {awaitingClient && (
                             <div className="simulation-panel mt-16">
                                 <div className="simulation-header">
                                     <Icon name="link" />
                                     <span>Send confirmation to client</span>
                                 </div>
                                 <p className="simulation-text">
-                                    Advance submitted. <strong>{invoice.client.name}</strong> ({invoice.client.email}) must confirm before funding can proceed.
+                                    <strong>{invoice.client.name}</strong> ({invoice.client.email}) must confirm this invoice before the advance can be reviewed.
                                 </p>
                                 <button
-                                    className="btn btn-secondary full-width mt-8"
-                                    onClick={() => navigate(`/client/confirm/${invoice.clientConfirmation!.token}?from=${invoice.id}`)}
+                                    className="btn btn-sim"
+                                    onClick={() => navigate(`/client/confirm/${invoice.clientConfirmation!.token}?from=${advance.id}`)}
                                 >
-                                    <Icon name="open" /> Preview client confirmation page
+                                    Simulate client action
                                 </button>
-                                {sendSimulated ? (
-                                    <div className="simulation-panel success mt-8">
-                                        <Icon name="check" />
-                                        <span>Link sent to {invoice.client.email}</span>
-                                    </div>
-                                ) : (
-                                    <button
-                                        className="btn btn-primary full-width mt-8"
-                                        onClick={async () => {
-                                            const now = new Date().toISOString()
-                                            await updateAdvance(advance.id, { status: 'PendingClientConfirmation', updatedAt: now })
-                                            await updateInvoice(invoice.id, { status: 'PendingClientConfirmation' })
-                                            await refetchInvoices()
-                                            setSendSimulated(true)
-                                        }}
-                                    >
-                                        <Icon name="advance" /> Send to {invoice.client.email}
-                                    </button>
-                                )}
                             </div>
                         )}
-                        {awaitingClient && (
-                            <div className="simulation-panel mt-16">
-                                <div className="simulation-header">
-                                    <Icon name="check" />
-                                    <span>Awaiting client confirmation</span>
-                                </div>
-                                <p className="simulation-text">
-                                    Link sent to <strong>{invoice.client.email}</strong>. Waiting for their confirmation before the advance can be reviewed.
-                                </p>
-                            </div>
-                        )}
-                        {!notSentYet && !awaitingClient && nextLabel && (
+                        {!awaitingClient && nextLabel && (
                             <div className="simulation-panel mt-16">
                                 <div className="simulation-header">
                                     <Icon name="settings" />
                                     <span>Lifecycle Simulator</span>
                                 </div>
                                 <p className="simulation-text">Trigger the next phase of the financing lifecycle to test state transitions and ledger entries.</p>
-                                <button className="btn btn-sim full-width" onClick={simulate} disabled={simulating}>
-                                    <Icon name="next" /> {simulating ? 'Processing...' : nextLabel}
+                                <button className="btn btn-sim" onClick={simulate} disabled={simulating}>
+                                    {simulating ? 'Processing...' : nextLabel}
                                 </button>
                             </div>
                         )}
-                        {!notSentYet && !awaitingClient && !nextLabel && (
+                        {!awaitingClient && !nextLabel && (
                             (() => {
                                 if (advance.status === 'Repaid' || advance.status === 'BufferReleased') {
                                     return (
@@ -253,13 +221,14 @@ export default function AdvanceDetail() {
                                         </div>
                                     )
                                 }
-                                const messages: Record<string, { icon: 'check' | 'settings' | 'review' | 'next'; title: string; body: string }> = {
+                                const messages: Record<string, { icon: 'check' | 'settings' | 'review' | 'next'; title: string; body: string; disputed?: boolean }> = {
                                     PendingReview:         { icon: 'review',   title: 'Under review',                    body: 'Your advance request is being reviewed by the Hassil team.' },
                                     Approved:              { icon: 'next',     title: 'Approved — awaiting disbursement', body: 'The advance has been approved. Disbursement will be processed shortly.' },
                                     Disbursed:             { icon: 'check',    title: 'Advance funded',                   body: 'The advance has been sent to your bank account.' },
                                     ClientPaymentDetected: { icon: 'settings', title: 'Payment detected',                 body: 'Client payment has been detected. Repayment is being processed.' },
                                     ClientPaidHassil:      { icon: 'settings', title: 'Client paid Hassil',               body: 'Client payment received. Settlement buffer will be released shortly.' },
                                     Rejected:              { icon: 'review',   title: 'Advance rejected',                 body: advance.rejectionReason ?? 'The advance request was not approved.' },
+                                    Disputed:              { icon: 'review',   title: 'Invoice disputed by client',       body: 'The client disputed this invoice. The advance has been cancelled. Resolve the dispute with your client and submit a new advance.', disputed: true },
                                 }
                                 const msg = messages[advance.status]
                                 if (!msg) return <p className="soft-text mt-16">No next step available for this status.</p>
@@ -285,7 +254,15 @@ export default function AdvanceDetail() {
                     </div>
                 </div>
                 <div>
-                    {aiSnapshot && <AiRecommendationCollapsible snapshot={aiSnapshot} />}
+                    {aiSnapshot
+                        ? <AiRecommendationCollapsible snapshot={aiSnapshot} />
+                        : (
+                            <div className="card" style={{ marginBottom: 24 }}>
+                                <h2 className="card-title">AI Recommendation</h2>
+                                <p className="soft-text mt-8">No AI review has been generated for this advance yet. The admin can trigger one during review.</p>
+                            </div>
+                        )
+                    }
                 </div>
             </div>
         </>
