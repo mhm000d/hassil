@@ -23,7 +23,7 @@ public class AdvanceCalculatorService : IAdvanceCalculatorService
 
         var isFactoring = financingModel == FinancingModel.InvoiceFactoring;
         var advanceAmount = Round(invoice.Amount * percent);
-        var feeAmount = Round(invoice.Amount * tier.FeeRate);
+        var feeAmount = Round(advanceAmount * tier.FeeRate);
         var settlementBufferAmount = isFactoring
             ? Round(invoice.Amount - advanceAmount - feeAmount)
             : 0m;
@@ -33,8 +33,8 @@ public class AdvanceCalculatorService : IAdvanceCalculatorService
             : Round(advanceAmount + feeAmount);
 
         var messages = new List<string>();
-        if (invoice.Amount > tier.MaxEligibleInvoiceAmount)
-            messages.Add($"Invoice amount exceeds the current limit of {tier.MaxEligibleInvoiceAmount:0.00} {invoice.Currency}.");
+        if (advanceAmount > tier.MaxEligibleInvoiceAmount)
+            messages.Add($"Requested advance exceeds the current funding limit of {tier.MaxEligibleInvoiceAmount:0.00} {invoice.Currency}.");
 
         if (invoice.DueDate < DateOnly.FromDateTime(DateTime.UtcNow))
             messages.Add("Invoice due date is in the past.");

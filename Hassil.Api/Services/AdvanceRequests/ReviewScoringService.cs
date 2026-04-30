@@ -22,9 +22,6 @@ public class ReviewScoringService : IReviewScoringService
         if (!termsAccepted)
             Deduct(100, "Terms were not accepted.");
 
-        if (invoice.Documents.Count == 0)
-            Deduct(25, "Supporting document is missing.");
-
         if (daysUntilDue < 0)
             Deduct(100, "Invoice due date is in the past.");
         else if (daysUntilDue > 90)
@@ -33,10 +30,10 @@ public class ReviewScoringService : IReviewScoringService
         if (user.TrustScore < 50)
             Deduct(20, "User trust score is below auto-approval threshold.");
 
-        if (invoice.Amount > quote.MaxEligibleInvoiceAmount)
-            Deduct(35, "Invoice amount exceeds the trust-based limit.");
-        else if (invoice.Amount >= quote.MaxEligibleInvoiceAmount * 0.9m)
-            Deduct(10, "Invoice amount is close to the current limit.");
+        if (quote.AdvanceAmount > quote.MaxEligibleInvoiceAmount)
+            Deduct(35, "Requested advance exceeds the trust-based funding limit.");
+        else if (quote.AdvanceAmount >= quote.MaxEligibleInvoiceAmount * 0.9m)
+            Deduct(10, "Requested advance is close to the current funding limit.");
 
         if (invoice.ClientConfirmation?.Status == ConfirmationStatus.Disputed)
             Deduct(100, "Client disputed the invoice.");

@@ -34,7 +34,7 @@ export default function LifecycleStepper({ status, model }: { status: AdvanceSta
                     key={step.label}
                     className={`lifecycle-step ${index < activeIndex ? 'done' : ''} ${index === activeIndex ? 'active' : ''}`}
                 >
-                    <span>{index < activeIndex ? '✓' : index + 1}</span>
+                    <span>{index < activeIndex ? 'OK' : index + 1}</span>
                     <strong>{step.label}</strong>
                 </div>
             ))}

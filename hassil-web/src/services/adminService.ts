@@ -1,36 +1,197 @@
 import { api } from './apiClient'
-import type { AdminReview, AdvanceRequest, Invoice, AiReviewSnapshot } from '../types'
+import {
+    mapAdvanceResponse,
+    mapAdvanceSummary,
+    type ApiAdvanceRequestResponse,
+    type ApiAdvanceRequestSummaryResponse,
+} from './advanceService'
+import type {
+    AdminDecision,
+    AdminReview,
+    AdvanceRequest,
+    AiRecommendedAction,
+    AiReviewSnapshot,
+    AiRiskLevel,
+    Invoice,
+    ReceivableSource,
+} from '../types'
+
+export interface ReviewChecklistItem {
+    label: string
+    passed: boolean
+    detail?: string
+}
+
+export interface AdminAdvanceRequestDetail {
+    advanceRequest: AdvanceRequest
+    invoice: Invoice
+    verificationChecklist: ReviewChecklistItem[]
+    latestAiReview?: AiReviewSnapshot
+    adminReviews: AdminReview[]
+}
+
+interface ApiClient {
+    id: string
+    name: string
+    email: string
+    country?: string
+}
+
+interface ApiInvoiceSummaryResponse {
+    id: string
+    invoiceNumber: string
+    client: ApiClient
+    receivableSource: string
+    amount: number
+    currency: string
+    dueDate: string
+    status: Invoice['status']
+    documentCount: number
+    advanceRequestId?: string | null
+    createdAt: string
+}
+
+interface ApiAdminAdvanceRequestResponse extends Omit<ApiAdvanceRequestResponse, 'invoice'> {
+    invoice: ApiInvoiceSummaryResponse
+}
+
+interface ApiReviewChecklistItemResponse {
+    label: string
+    passed: boolean
+    detail?: string
+}
+
+interface ApiAiReviewSnapshotResponse {
+    id: string
+    riskLevel: string
+    recommendedAction: string
+    summary: string
+    riskFlags: string[]
+    modelName: string
+    createdAt: string
+}
+
+interface ApiAdminReviewResponse {
+    id: string
+    reviewerUserId: string
+    decision: string
+    notes?: string
+    createdAt: string
+}
+
+interface ApiAdminAdvanceRequestDetailResponse {
+    advanceRequest: ApiAdminAdvanceRequestResponse
+    verificationChecklist: ApiReviewChecklistItemResponse[]
+    latestAiReview?: ApiAiReviewSnapshotResponse | null
+    adminReviews: ApiAdminReviewResponse[]
+}
+
+function mapInvoiceSummary(response: ApiInvoiceSummaryResponse): Invoice {
+    return {
+        id: response.id,
+        userId: '',
+        clientId: response.client.id,
+        client: response.client,
+        invoiceNumber: response.invoiceNumber,
+        receivableSource: response.receivableSource as ReceivableSource,
+        amount: response.amount,
+        currency: response.currency,
+        issueDate: response.createdAt.slice(0, 10),
+        dueDate: response.dueDate,
+        status: response.status,
+        fingerprint: '',
+        createdAt: response.createdAt,
+        documents: [],
+        documentCount: response.documentCount,
+        advanceRequestId: response.advanceRequestId ?? undefined,
+    }
+}
+
+function mapAiReview(
+    response: ApiAiReviewSnapshotResponse | null | undefined,
+    advanceRequestId: string,
+): AiReviewSnapshot | undefined {
+    if (!response) return undefined
+
+    return {
+        id: response.id,
+        advanceRequestId,
+        riskLevel: response.riskLevel as AiRiskLevel,
+        recommendedAction: response.recommendedAction as AiRecommendedAction,
+        summary: response.summary,
+        riskFlags: response.riskFlags,
+        createdAt: response.createdAt,
+    }
+}
+
+function mapAdminReview(response: ApiAdminReviewResponse, advanceRequestId: string): AdminReview {
+    return {
+        id: response.id,
+        advanceRequestId,
+        reviewerUserId: response.reviewerUserId,
+        decision: response.decision as AdminDecision,
+        notes: response.notes,
+        createdAt: response.createdAt,
+    }
+}
+
+function mapDetail(response: ApiAdminAdvanceRequestDetailResponse): AdminAdvanceRequestDetail {
+    const advanceRequest = mapAdvanceResponse(response.advanceRequest)
+
+    return {
+        advanceRequest,
+        invoice: mapInvoiceSummary(response.advanceRequest.invoice),
+        verificationChecklist: response.verificationChecklist.map((item) => ({
+            label: item.label,
+            passed: item.passed,
+            detail: item.detail,
+        })),
+        latestAiReview: mapAiReview(response.latestAiReview, response.advanceRequest.id),
+        adminReviews: response.adminReviews.map((review) => mapAdminReview(review, response.advanceRequest.id)),
+    }
+}
+
+const adminAdvancePath = (id: string) => `/admin/advance-requests/${id}`
 
 export const AdminService = {
-    getReviewData: async () => {
-        return await Promise.all([
-            api.get<AdvanceRequest[]>('/admin/advances'),
-            api.get<Invoice[]>('/admin/invoices'),
-            api.get<AiReviewSnapshot[]>('/admin/ai-snapshots')
-        ])
+    listPending: async () => {
+        const response = await api.get<ApiAdvanceRequestSummaryResponse[]>('/admin/advance-requests/pending')
+        return response.map(mapAdvanceSummary)
     },
 
-    listInvoices: async () => {
-        return await api.get<Invoice[]>('/admin/invoices')
+    getDetail: async (id: string) => {
+        const response = await api.get<ApiAdminAdvanceRequestDetailResponse>(adminAdvancePath(id))
+        return mapDetail(response)
     },
 
-    listAdvances: async () => {
-        return await api.get<AdvanceRequest[]>('/admin/advances')
+    approve: async (id: string, notes?: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/approve`,
+            { notes },
+        )
+        return mapDetail(response)
     },
 
-    listAiSnapshots: async () => {
-        return await api.get<AiReviewSnapshot[]>('/admin/ai-snapshots')
+    reject: async (id: string, reason: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/reject`,
+            { reason },
+        )
+        return mapDetail(response)
     },
 
-    updateAdvance: async (id: string, patch: Partial<AdvanceRequest>) => {
-        return await api.patch<AdvanceRequest>(`/advances/${id}`, patch)
+    requestMoreInfo: async (id: string, notes?: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/request-more-info`,
+            { notes },
+        )
+        return mapDetail(response)
     },
 
-    updateInvoice: async (id: string, patch: Partial<Invoice>) => {
-        return await api.patch<Invoice>(`/invoices/${id}`, patch)
+    generateAiReview: async (id: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/ai-review`,
+        )
+        return mapDetail(response)
     },
-
-    addReview: async (review: Omit<AdminReview, 'id' | 'createdAt'>) => {
-        return await api.post<AdminReview>('/admin-reviews', review)
-    }
 }

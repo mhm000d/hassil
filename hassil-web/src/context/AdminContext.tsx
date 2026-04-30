@@ -1,7 +1,7 @@
-import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useState, useEffect, useCallback, useContext, type ReactNode } from 'react'
 import type { AdvanceRequest, Invoice, AiReviewSnapshot, AdminReview } from '../types'
 import { AdminService } from '../services/adminService'
-import { api } from '../services/apiClient'
+import { AuthContext } from './AuthContext'
 
 interface AdminContextValue {
     advances: AdvanceRequest[]
@@ -19,65 +19,89 @@ interface AdminContextValue {
 export const AdminContext = createContext<AdminContextValue | null>(null)
 
 export function AdminProvider({ children }: { children: ReactNode }) {
+    const { user, isInitialized } = useContext(AuthContext)
     const [advances, setAdvances] = useState<AdvanceRequest[]>([])
-    const [invoices, setInvoices] = useState<Invoice[]>([])
-    const [aiSnapshots, setAiSnapshots] = useState<AiReviewSnapshot[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
+    const isAdmin = user?.role === 'Admin'
+
     const fetchAll = useCallback(async () => {
+        if (!isInitialized) return
+
+        if (!isAdmin) {
+            setAdvances([])
+            setLoading(false)
+            setError(null)
+            return
+        }
+
         try {
             setLoading(true)
-            const [advs, invs, aiSnaps] = await AdminService.getReviewData()
-            setAdvances(advs)
-            setInvoices(invs)
-            setAiSnapshots(aiSnaps)
+            const pending = await AdminService.listPending()
+            setAdvances(pending)
             setError(null)
         } catch (err: any) {
-            setError(err.message || 'Failed to fetch admin data')
+            setError(err.message || 'Failed to fetch admin review queue')
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [isAdmin, isInitialized])
 
     useEffect(() => {
         fetchAll()
     }, [fetchAll])
 
     const getAiSnapshot = async (advanceId: string) => {
-        return await api.get<AiReviewSnapshot>(`/ai-snapshots/${advanceId}`)
+        const detail = await AdminService.getDetail(advanceId)
+        return detail.latestAiReview
     }
 
     const updateAdvance = async (id: string, patch: Partial<AdvanceRequest>) => {
-        const res = await AdminService.updateAdvance(id, patch)
+        let detail
+
+        if (patch.status === 'Approved') {
+            detail = await AdminService.approve(id)
+        } else if (patch.status === 'Rejected') {
+            detail = await AdminService.reject(id, patch.rejectionReason ?? 'Rejected by admin reviewer.')
+        } else {
+            detail = await AdminService.getDetail(id)
+        }
+
         await fetchAll()
-        return res
+        return detail.advanceRequest
     }
 
-    const updateInvoice = async (id: string, patch: Partial<Invoice>) => {
-        const res = await AdminService.updateInvoice(id, patch)
-        await fetchAll()
-        return res
-    }
+    const updateInvoice = async () => undefined
 
     const addReview = async (review: Omit<AdminReview, 'id' | 'createdAt'>) => {
-        const res = await AdminService.addReview(review)
+        const detail = review.decision === 'RequestMoreInfo'
+            ? await AdminService.requestMoreInfo(review.advanceRequestId, review.notes)
+            : await AdminService.getDetail(review.advanceRequestId)
+
         await fetchAll()
-        return res
+        return detail.adminReviews[0] ?? {
+            id: '',
+            advanceRequestId: review.advanceRequestId,
+            reviewerUserId: review.reviewerUserId,
+            decision: review.decision,
+            notes: review.notes,
+            createdAt: new Date().toISOString(),
+        }
     }
 
     return (
-        <AdminContext.Provider value={{ 
-            advances, 
-            invoices, 
-            aiSnapshots, 
-            loading, 
-            error, 
+        <AdminContext.Provider value={{
+            advances,
+            invoices: [],
+            aiSnapshots: [],
+            loading,
+            error,
             refetch: fetchAll,
             getAiSnapshot,
             updateAdvance,
             updateInvoice,
-            addReview
+            addReview,
         }}>
             {children}
         </AdminContext.Provider>

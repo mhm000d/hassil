@@ -2,19 +2,16 @@ import type { ReactNode } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import Icon from './Icon'
 import Logo from './Logo'
-import { mockUsers, mockApi } from '../data/mockApi'
-import { useAuth } from '../hooks'
+import { useAuth, useAdvances } from '../hooks'
 
 interface AppLayoutProps {
     children?: ReactNode
 }
 
-const currentUser = mockUsers[0]
-
 const pageTitleMap: [string, string][] = [
     ['/invoices/new', 'Create invoice'],
     ['/invoices', 'Invoices'],
-    ['/advances', 'Advance detail'],
+    ['/advances', 'Advances'],
     ['/cash-flow', 'Cash-flow forecast'],
     ['/ledger', 'Ledger'],
     ['/admin', 'Admin review'],
@@ -27,22 +24,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const location = useLocation()
     const path = location.pathname
     const { user: authUser, logout } = useAuth()
+    const { advances } = useAdvances()
 
-    // Use logged-in user name if available, fall back to mock seed user
     const displayName = authUser?.displayName
         ?? authUser?.name
-        ?? mockUsers[0].smallBusinessProfile?.businessName
-        ?? mockUsers[0].freelancerProfile?.fullName
-        ?? mockUsers[0].email
+        ?? authUser?.smallBusinessProfile?.businessName
+        ?? authUser?.freelancerProfile?.fullName
+        ?? authUser?.email
+        ?? 'Hassil user'
 
-    // Read synchronously from live in-memory state — always up to date
-    const pendingToken = mockApi.getPendingConfirmationToken()
+    const pendingClientAdvance = advances.find((advance) =>
+        advance.status === 'PendingClientConfirmation' && advance.clientConfirmationToken)
+    const pendingToken = pendingClientAdvance?.clientConfirmationToken ?? null
 
     const isAdminPath = path.startsWith('/admin')
 
     const allNavItems = [
         { path: '/dashboard', label: 'Home', icon: 'home' as const },
         { path: '/invoices', label: 'Invoices', icon: 'invoice' as const },
+        { path: '/advances', label: 'Advances', icon: 'advance' as const },
         { path: '/cash-flow', label: 'Cash Flow', icon: 'cashflow' as const },
         { path: '/ledger', label: 'Ledger', icon: 'ledger' as const },
         { path: '/admin', label: 'Admin', icon: 'admin' as const },
@@ -58,8 +58,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const pageTitle = pageTitleMap.find(([key]) => path.startsWith(key))?.[1] ?? 'Hassil'
 
     const goClientLink = () => {
-        const token = mockApi.getPendingConfirmationToken()
-        navigate(token ? `/client/confirm/${token}` : '/advances/adv-002')
+        navigate(pendingToken ? `/client/confirm/${pendingToken}` : pendingClientAdvance ? `/advances/${pendingClientAdvance.id}` : '/advances')
     }
 
     return (
@@ -71,13 +70,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </div>
                     <div className="header-context">
                         <strong>{pageTitle}</strong>
-                        <span>{(authUser?.accountType ?? currentUser.accountType) === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'}</span>
+                        <span>{authUser?.accountType === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'}</span>
                         <em>Verified profile</em>
                     </div>
                     <div className="top-actions header-actions">
-                        <button type="button" className="btn btn-ghost">
-                            {displayName}
-                        </button>
+                        {/*<button type="button" className="btn btn-ghost">*/}
+                        {/*    {displayName}*/}
+                        {/*</button>*/}
                         {!isAdminPath && (
                             <button type="button" className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
                                 <Icon name="plus" /> Create Invoice
@@ -92,9 +91,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     <div className="rail-avatar"><Icon name="check" /></div>
                     <div>
                         <strong>{isAdminPath ? 'Admin Console' : displayName}</strong>
-                        <span>{isAdminPath ? 'System Administrator' : `Trust score ${currentUser.trustScore}`}</span>
+                        <span>{isAdminPath ? 'System Administrator' : `Trust score ${authUser?.trustScore ?? 0}`}</span>
                     </div>
                 </div>
+                {/*{!isAdminPath && (*/}
+                {/*    <button className="rail-quick-action" onClick={() => navigate('/invoices/new')}>*/}
+                {/*        <Icon name="plus" />*/}
+                {/*        <div>*/}
+                {/*            <strong>New invoice</strong>*/}
+                {/*            <span>Add receivable</span>*/}
+                {/*        </div>*/}
+                {/*    </button>*/}
+                {/*)}*/}
                 <nav className="rail-nav">
                     {navItems.map((item) => {
                         const isActive =

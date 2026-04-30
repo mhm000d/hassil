@@ -1,9 +1,15 @@
+import { Link } from 'react-router-dom'
 import '../../styles/Footer.css'
 
-const footerLinks = [
-    { label: 'Compliance', href: '#' },
-    { label: 'Legal', href: '#' },
-    { label: 'Register Support', href: '#' },
+type FooterLink =
+    | { label: string; href: string; kind: 'anchor' }
+    | { label: string; to: string; kind: 'route' }
+
+const footerLinks: FooterLink[] = [
+    { label: 'How it works', href: '/#bridging', kind: 'anchor' },
+    { label: 'Compliance', to: '/compliance', kind: 'route' },
+    { label: 'Legal', to: '/legal', kind: 'route' },
+    { label: 'Support', to: '/support', kind: 'route' },
 ]
 
 export default function Footer() {
@@ -14,12 +20,14 @@ export default function Footer() {
                 <div className="footer__left">
                     <span className="footer__brand">Hassil</span>
                     <span className="footer__copyright">
-                        © {year} Hassil Fintech. Regulated by regional financial authorities.
+                        © {year} Hassil. Clear cash-flow access for finished work.
                     </span>
                 </div>
                 <nav className="footer__links" aria-label="Footer navigation">
                     {footerLinks.map((link) => (
-                        <a key={link.label} href={link.href} className="footer__link">{link.label}</a>
+                        link.kind === 'route'
+                            ? <Link key={link.label} to={link.to} className="footer__link">{link.label}</Link>
+                            : <a key={link.label} href={link.href} className="footer__link">{link.label}</a>
                     ))}
                 </nav>
             </div>

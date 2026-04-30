@@ -1,5 +1,14 @@
 import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import { AuthService, getStoredTokens, updateAuthTokens, type Tokens } from '../services'
+import {
+    AuthService,
+    getStoredTokens,
+    tokensFromAuthResponse,
+    updateAuthTokens,
+    type AuthResponse,
+    type FreelancerOnboardingPayload,
+    type LoginPayload,
+    type SmallBusinessOnboardingPayload
+} from '../services'
 import type { User } from '../types'
 
 export const AuthStatus = {
@@ -17,10 +26,10 @@ interface AuthContextValue {
     isInitialized: boolean
     error: string | null
     me: () => Promise<void>
-    login: (credentials: any) => Promise<void>
+    login: (credentials: LoginPayload) => Promise<void>
     logout: () => Promise<void>
-    signup: (payload: any) => Promise<void>
-    completeProfile: (payload: { email: string, displayName: string }) => Promise<void>
+    onboardSmallBusiness: (payload: SmallBusinessOnboardingPayload) => Promise<void>
+    onboardFreelancer: (payload: FreelancerOnboardingPayload) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue>({
@@ -31,8 +40,8 @@ export const AuthContext = createContext<AuthContextValue>({
     me: async () => {},
     login: async () => {},
     logout: async () => {},
-    signup: async () => {},
-    completeProfile: async () => {}
+    onboardSmallBusiness: async () => {},
+    onboardFreelancer: async () => {}
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -41,92 +50,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isInitialized, setIsInitialized] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    function updateState(type: 'login' | 'signup' | 'logout' | 'me', value?: Tokens | User) {
-        switch (type) {
-            case 'login':
-            case 'signup':
-                updateAuthTokens(value as Tokens)
-                setAuthStatus(AuthStatus.LOGGED_IN)
-                break
-            case 'logout':
-                setUser(null)
-                updateAuthTokens(null)
-                setAuthStatus(AuthStatus.LOGGED_OUT)
-                break
-            case 'me':
-                setUser(value as User)
-                setAuthStatus(AuthStatus.ACTIVE)
-                break
-        }
-    }
+    const applyAuthResponse = useCallback((response: AuthResponse) => {
+        updateAuthTokens(tokensFromAuthResponse(response))
+        setUser(response.user)
+        setAuthStatus(AuthStatus.ACTIVE)
+    }, [])
+
+    const clearAuthState = useCallback(() => {
+        setUser(null)
+        updateAuthTokens(null)
+        setAuthStatus(AuthStatus.LOGGED_OUT)
+    }, [])
 
     const me = useCallback(async () => {
         try {
             const tokens = getStoredTokens()
-            if (!tokens?.access_token) {
-                setAuthStatus(AuthStatus.LOGGED_OUT)
+            if (!tokens?.accessToken && !tokens?.access_token) {
+                clearAuthState()
                 return
             }
             const fetchedUser = await AuthService.me()
-            updateState('me', fetchedUser)
+            setUser(fetchedUser)
+            setAuthStatus(AuthStatus.ACTIVE)
         } catch (err) {
             console.error('Failed to fetch user:', err)
-            setAuthStatus(AuthStatus.LOGGED_OUT)
+            clearAuthState()
         }
-    }, [])
+    }, [clearAuthState])
 
-    const login = useCallback(async (credentials: any) => {
+    const login = useCallback(async (credentials: LoginPayload) => {
         try {
             setError(null)
-            const tokens = await AuthService.login(credentials)
-            if (!tokens?.access_token) throw new Error('Invalid response')
-            updateState('login', tokens)
-            await me()
+            const response = await AuthService.login(credentials)
+            if (!response?.accessToken) throw new Error('Invalid login response')
+            applyAuthResponse(response)
         } catch (err: any) {
             setError(err.message)
             setAuthStatus(AuthStatus.ERROR)
             throw err
         }
-    }, [me])
+    }, [applyAuthResponse])
 
-    const signup = useCallback(async (payload: any) => {
+    const onboardSmallBusiness = useCallback(async (payload: SmallBusinessOnboardingPayload) => {
         try {
             setError(null)
-            const tokens = await AuthService.signup(payload)
-            if (!tokens?.access_token) throw new Error('Invalid response')
-            updateState('signup', tokens)
-            await me()
+            const response = await AuthService.onboardSmallBusiness(payload)
+            if (!response?.accessToken) throw new Error('Invalid onboarding response')
+            applyAuthResponse(response)
         } catch (err: any) {
             setError(err.message)
             setAuthStatus(AuthStatus.ERROR)
             throw err
         }
-    }, [me])
+    }, [applyAuthResponse])
+
+    const onboardFreelancer = useCallback(async (payload: FreelancerOnboardingPayload) => {
+        try {
+            setError(null)
+            const response = await AuthService.onboardFreelancer(payload)
+            if (!response?.accessToken) throw new Error('Invalid onboarding response')
+            applyAuthResponse(response)
+        } catch (err: any) {
+            setError(err.message)
+            setAuthStatus(AuthStatus.ERROR)
+            throw err
+        }
+    }, [applyAuthResponse])
 
     const logout = useCallback(async () => {
         try {
             await AuthService.logout()
-            updateState('logout')
+            clearAuthState()
         } catch (err) {
             console.error(err)
         }
-    }, [])
-
-    const completeProfile = useCallback(async (payload: { email: string, displayName: string }) => {
-        try {
-            setError(null)
-            await AuthService.completeProfile(payload)
-            await me()
-        } catch (err: any) {
-            setError(err.message)
-            throw err
-        }
-    }, [me])
+    }, [clearAuthState])
 
     useEffect(() => {
         const init = async () => {
             const tokens = getStoredTokens()
-            if (tokens?.access_token) {
+            if (tokens?.accessToken || tokens?.access_token) {
                 setAuthStatus(AuthStatus.LOGGED_IN)
                 await me()
             }
@@ -136,10 +139,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [me])
 
     return (
-        <AuthContext.Provider value={{ user, authStatus, isInitialized, error, me, login, logout, signup, completeProfile }}>
+        <AuthContext.Provider value={{
+            user,
+            authStatus,
+            isInitialized,
+            error,
+            me,
+            login,
+            logout,
+            onboardSmallBusiness,
+            onboardFreelancer
+        }}>
             {children}
         </AuthContext.Provider>
     )
 }
-
-

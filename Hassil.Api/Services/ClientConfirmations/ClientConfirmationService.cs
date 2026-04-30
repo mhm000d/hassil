@@ -54,8 +54,7 @@ public class ClientConfirmationService(
         advance.UpdateReviewScore(review.Score);
 
         if (review.Score >= 75
-            && advance.User.TrustScore >= 50
-            && invoice.Documents.Count > 0)
+            && advance.User.TrustScore >= 50)
         {
             RunTransition(
                 () =>

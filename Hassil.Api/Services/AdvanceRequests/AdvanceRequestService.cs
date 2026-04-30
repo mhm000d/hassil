@@ -317,6 +317,8 @@ public class AdvanceRequestService(
             .Include(a => a.Invoice)
             .ThenInclude(i => i.Client)
             .Include(a => a.Invoice)
+            .ThenInclude(i => i.ClientConfirmation)
+            .Include(a => a.Invoice)
             .ThenInclude(i => i.Documents)
             .Include(a => a.Transactions);
 
@@ -375,8 +377,7 @@ public class AdvanceRequestService(
             invoice.SendToReview();
 
             if (review.Score >= 75
-                && user.TrustScore >= 50
-                && invoice.Documents.Count > 0)
+                && user.TrustScore >= 50)
             {
                 advanceRequest.ApproveAutomatically();
                 invoice.Approve();

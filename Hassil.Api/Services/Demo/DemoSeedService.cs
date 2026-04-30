@@ -246,8 +246,8 @@ public class DemoSeedService(
                 advanceRequestId:    reviewAdvance.Id,
                 riskLevel:           AiRiskLevel.Medium,
                 recommendedAction:   AiRecommendedAction.ManualReview,
-                summary:             "Manual review recommended: the invoice is close to Sara Designs' current limit and no supporting document has been attached.",
-                riskFlagsJson:       "[\"Supporting document is missing\",\"Invoice is close to current freelancer limit\"]",
+                summary:             "Manual review recommended: the invoice is close to Sara Designs' current limit.",
+                riskFlagsJson:       "[\"Invoice is close to current freelancer limit\"]",
                 modelName:           "mock-ai-review-v1")
         };
 

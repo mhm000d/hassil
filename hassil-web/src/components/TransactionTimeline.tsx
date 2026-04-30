@@ -1,5 +1,5 @@
 import type { Transaction } from '../types'
-import { formatCurrency, formatDateTime } from '../data/mockApi'
+import { formatCurrency, formatDateTime } from '../utils/formatters'
 import EmptyPanel from './EmptyPanel'
 
 function transactionLabel(type: Transaction['type']): string {
@@ -37,6 +37,7 @@ export default function TransactionTimeline({ transactions }: { transactions: Tr
                     <div className="timeline-content">
                         <div className="timeline-type">
                             {transactionLabel(tx.type)} · {tx.direction}
+                            {tx.invoiceNumber && ` · ${tx.invoiceNumber}`}
                         </div>
                         <div className="timeline-desc">{tx.description}</div>
                         <div className="timeline-amount">

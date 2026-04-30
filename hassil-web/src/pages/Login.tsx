@@ -1,7 +1,32 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks'
 import '../styles/Login.css'
+
+type WorkspacePersona = 'small_business' | 'freelancer'
+
+const workspaceAccounts: Array<{
+    persona: WorkspacePersona
+    name: string
+    label: string
+    email: string
+    path: string
+}> = [
+    {
+        persona: 'small_business',
+        name: 'Ahmed Studio',
+        label: 'Small business',
+        email: 'finance@ahmedstudio.co',
+        path: '/dashboard'
+    },
+    {
+        persona: 'freelancer',
+        name: 'Sara Designs',
+        label: 'Freelancer',
+        email: 'sara@saradesigns.co',
+        path: '/dashboard'
+    }
+]
 
 export default function Login() {
     const navigate = useNavigate()
@@ -10,15 +35,35 @@ export default function Login() {
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
+    const [activeWorkspace, setActiveWorkspace] = useState<WorkspacePersona | null>(null)
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
+        await runLogin({ email: email.trim(), password }, '/dashboard')
+    }
+
+    const handleWorkspaceLogin = async (account: (typeof workspaceAccounts)[number]) => {
+        setEmail(account.email)
+        setPassword('workspace')
+        setActiveWorkspace(account.persona)
+        await runLogin({ persona: account.persona, email: account.email, password: 'workspace' }, account.path)
+        setActiveWorkspace(null)
+    }
+
+    const runLogin = async (
+        credentials: { email?: string; password?: string; persona?: string },
+        path: string
+    ) => {
         setError('')
+        setSubmitting(true)
         try {
-            await login({ email, password })
-            navigate('/dashboard')
+            await login(credentials)
+            setSubmitting(false)
+            navigate(path)
         } catch (err: any) {
             setError(err.message || 'Invalid email or password.')
+            setSubmitting(false)
         }
     }
 
@@ -43,6 +88,23 @@ export default function Login() {
                 {error && (
                     <div className="feedback-item error" style={{ marginBottom: 16 }}>{error}</div>
                 )}
+                <div className="workspace-login-grid" aria-label="Saved workspaces">
+                    {workspaceAccounts.map((account) => (
+                        <button
+                            key={account.persona}
+                            type="button"
+                            className="workspace-login-card"
+                            onClick={() => handleWorkspaceLogin(account)}
+                            disabled={submitting}
+                        >
+                            <span className="workspace-login-card__name">
+                                {activeWorkspace === account.persona ? 'Signing in...' : account.name}
+                            </span>
+                            <span className="workspace-login-card__meta">{account.label}</span>
+                            <span className="workspace-login-card__email">{account.email}</span>
+                        </button>
+                    ))}
+                </div>
                 <form className="login-card__form" onSubmit={handleSubmit}>
                     <div className="login-field">
                         <label className="login-field__label" htmlFor="login-email">EMAIL ADDRESS</label>
@@ -50,7 +112,7 @@ export default function Login() {
                             <svg className="login-field__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                             </svg>
-                            <input id="login-email" type="email" className="login-field__input" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                            <input id="login-email" type="email" className="login-field__input" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
                         </div>
                     </div>
                     <div className="login-field">
@@ -59,7 +121,7 @@ export default function Login() {
                             <svg className="login-field__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                             </svg>
-                            <input id="login-password" type={showPassword ? 'text' : 'password'} className="login-field__input" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                            <input id="login-password" type={showPassword ? 'text' : 'password'} className="login-field__input" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
                             <button type="button" className="login-field__toggle" onClick={() => setShowPassword(!showPassword)} aria-label="Toggle password visibility">
                                 {showPassword ? (
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -74,8 +136,8 @@ export default function Login() {
                             </button>
                         </div>
                     </div>
-                    <button type="submit" className="login-card__submit" id="btn-login-submit">
-                        Sign In
+                    <button type="submit" className="login-card__submit" id="btn-login-submit" disabled={submitting}>
+                        {submitting && !activeWorkspace ? 'Signing In...' : 'Sign In'}
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                         </svg>

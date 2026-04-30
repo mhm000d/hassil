@@ -1,40 +1,72 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks'
+import { createFreelancerStarterData } from '../utils/starterData'
 import '../styles/FreelancerOnboarding.css'
 
 export default function FreelancerOnboarding() {
     const navigate = useNavigate()
-    const { completeProfile } = useAuth()
+    const { onboardFreelancer } = useAuth()
 
     const pending = (() => {
         try { return JSON.parse(sessionStorage.getItem('hassil_pending_reg') ?? '{}') } catch { return {} }
     })()
 
-    const [form, setForm] = useState({
-        fullName: pending.name ?? '',
-        email: pending.email ?? '',
-        phone: '',
-        country: '',
-        bankName: '',
-        bankLast4: '',
+    const [form, setForm] = useState(() => {
+        const defaults = createFreelancerStarterData()
+        return {
+            fullName: pending.fullName ?? pending.name ?? defaults.fullName,
+            email: pending.email ?? defaults.email,
+            phone: pending.phone ?? defaults.phone,
+            country: pending.country ?? defaults.country,
+            bankName: pending.bankName ?? defaults.bankName,
+            bankLast4: pending.bankLast4 ?? defaults.bankLast4,
+        }
     })
+    const [error, setError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setForm({ ...form, [e.target.name]: e.target.value })
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.name === 'bankLast4'
+            ? e.target.value.replace(/\D/g, '').slice(0, 4)
+            : e.target.value
+
+        setError('')
+        setForm({ ...form, [e.target.name]: value })
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
-        const email = form.email || pending.email
-        const fullName = form.fullName || pending.name || 'Freelancer'
+        setError('')
 
-        if (email) {
-            await completeProfile({ email, displayName: fullName })
+        const bankLast4 = form.bankLast4.trim()
+        if (!/^\d{4}$/.test(bankLast4)) {
+            setError('Enter the last 4 bank account digits.')
+            return
         }
 
-        sessionStorage.removeItem('hassil_pending_reg')
-        navigate('/dashboard')
+        const email = String(form.email || pending.email || '').trim()
+        const fullName = String(form.fullName || pending.name || 'Freelancer').trim()
+
+        setSubmitting(true)
+
+        try {
+            await onboardFreelancer({
+                email,
+                fullName,
+                phone: form.phone.trim(),
+                country: form.country.trim(),
+                personalBankAccountName: form.bankName.trim(),
+                personalBankAccountLast4: bankLast4
+            })
+
+            sessionStorage.removeItem('hassil_pending_reg')
+            navigate('/dashboard')
+        } catch (err: any) {
+            setError(err.message || 'Could not complete onboarding.')
+        } finally {
+            setSubmitting(false)
+        }
     }
 
     return (
@@ -46,44 +78,54 @@ export default function FreelancerOnboarding() {
                         Hass<span className="onboarding-card__logo-accent">il</span>
                     </span>
                 </div>
+                <div className="onboarding-progress" aria-label="Setup progress">
+                    <span className="onboarding-progress__item is-complete">Account</span>
+                    <span className="onboarding-progress__item is-active">Profile</span>
+                    <span className="onboarding-progress__item">Dashboard</span>
+                </div>
                 <h1 className="onboarding-card__title">Freelancer Onboarding</h1>
                 <p className="onboarding-card__subtitle">
-                    Enter the basic profile and bank details needed to request advances.
+                    Starter details are filled in so you can continue quickly. Adjust anything you want.
                 </p>
+                {error && (
+                    <div className="feedback-item error" style={{ marginBottom: 16 }}>{error}</div>
+                )}
                 <form className="onboarding-form" onSubmit={handleSubmit}>
                     <div className="onboarding-form__row">
                         <div className="onboarding-field">
                             <label className="onboarding-field__label" htmlFor="ob-fullName">FULL NAME</label>
-                            <input id="ob-fullName" name="fullName" type="text" className="onboarding-field__input" placeholder="Mona UX Studio" value={form.fullName} onChange={handleChange} required />
+                            <input id="ob-fullName" name="fullName" type="text" className="onboarding-field__input" placeholder="Mona UX Studio" value={form.fullName} onChange={handleChange} autoComplete="name" required />
                         </div>
                         <div className="onboarding-field">
                             <label className="onboarding-field__label" htmlFor="ob-email">EMAIL</label>
-                            <input id="ob-email" name="email" type="email" className="onboarding-field__input" placeholder="mona.ux@example.com" value={form.email} onChange={handleChange} required />
+                            <input id="ob-email" name="email" type="email" className="onboarding-field__input" placeholder="mona@monaux.co" value={form.email} onChange={handleChange} autoComplete="email" required />
                         </div>
                     </div>
                     <div className="onboarding-form__row">
                         <div className="onboarding-field">
                             <label className="onboarding-field__label" htmlFor="ob-phone">PHONE NUMBER</label>
-                            <input id="ob-phone" name="phone" type="tel" className="onboarding-field__input" placeholder="+20 100 000 4444" value={form.phone} onChange={handleChange} required />
+                            <input id="ob-phone" name="phone" type="tel" className="onboarding-field__input" placeholder="+20 100 000 4444" value={form.phone} onChange={handleChange} autoComplete="tel" required />
                         </div>
                         <div className="onboarding-field">
                             <label className="onboarding-field__label" htmlFor="ob-country">COUNTRY</label>
-                            <input id="ob-country" name="country" type="text" className="onboarding-field__input" placeholder="Egypt" value={form.country} onChange={handleChange} required />
+                            <input id="ob-country" name="country" type="text" className="onboarding-field__input" placeholder="Egypt" value={form.country} onChange={handleChange} autoComplete="country-name" required />
                         </div>
                     </div>
                     <div className="onboarding-form__row">
                         <div className="onboarding-field">
                             <label className="onboarding-field__label" htmlFor="ob-bankName">VERIFIED BANK ACCOUNT NAME</label>
-                            <input id="ob-bankName" name="bankName" type="text" className="onboarding-field__input" placeholder="Mona Ahmed" value={form.bankName} onChange={handleChange} required />
+                            <input id="ob-bankName" name="bankName" type="text" className="onboarding-field__input" placeholder="Mona Ahmed" value={form.bankName} onChange={handleChange} autoComplete="name" required />
                         </div>
                         <div className="onboarding-field">
                             <label className="onboarding-field__label" htmlFor="ob-bankLast4">BANK ACCOUNT LAST 4 DIGITS</label>
-                            <input id="ob-bankLast4" name="bankLast4" type="text" className="onboarding-field__input" placeholder="7781" maxLength={4} value={form.bankLast4} onChange={handleChange} required />
+                            <input id="ob-bankLast4" name="bankLast4" type="text" className="onboarding-field__input" placeholder="7781" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} value={form.bankLast4} onChange={handleChange} required />
                         </div>
                     </div>
                     <div className="onboarding-form__actions">
                         <button type="button" className="onboarding-btn--secondary" onClick={() => navigate(-1)}>Back</button>
-                        <button type="submit" className="onboarding-btn--primary" id="btn-complete-profile">Complete Profile</button>
+                        <button type="submit" className="onboarding-btn--primary" id="btn-complete-profile" disabled={submitting}>
+                            {submitting ? 'Creating Profile...' : 'Complete Profile'}
+                        </button>
                     </div>
                 </form>
             </div>

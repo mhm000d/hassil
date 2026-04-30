@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { AdvanceRequest, AiReviewSnapshot, Invoice } from '../types'
+import type { AdvanceRequest, Invoice } from '../types'
 import {
     formatCurrency,
     formatDate,
     getModelLabel,
     getNextSimulationLabel,
-} from '../data/mockApi'
-
-import { useAuth, useInvoices, useAdvances, useTransactions, useAdmin } from '../hooks'
+} from '../utils/formatters'
+import { useInvoices, useAdvances, useTransactions } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
 import ModelBadge from '../components/ModelBadge'
@@ -31,118 +30,192 @@ function StatCard({ tone, label, value, sub }: { tone: 'gold' | 'green' | 'amber
     )
 }
 
-function AiReviewCard({ snapshot }: { snapshot: AiReviewSnapshot }) {
-    const statusMap = { Low: 'Approved', Medium: 'PendingReview', High: 'Rejected' } as const
-    return (
-        <div className="ai-review-card">
-            <div className="ai-review-header">
-                <span className="ai-badge">AI Review Assistant</span>
-                <StatusBadge status={statusMap[snapshot.riskLevel]} />
-            </div>
-            <h2 className="card-title">Recommended: {snapshot.recommendedAction}</h2>
-            <p className="ai-review-summary">{snapshot.summary}</p>
-            <div className="risk-flags">
-                {snapshot.riskFlags.length === 0 ? (
-                    <div className="risk-flag-item success">No extra risk flags</div>
-                ) : (
-                    snapshot.riskFlags.map((flag) => <div key={flag} className="risk-flag-item">{flag}</div>)
-                )}
-            </div>
-        </div>
-    )
+function getAdvanceNextStep(advance: AdvanceRequest) {
+    if (advance.status === 'PendingClientConfirmation') {
+        return {
+            tone: 'warning',
+            title: 'Client confirmation needed',
+            description: 'The client needs to confirm the invoice before Hassil can finish review.',
+            primaryLabel: 'Open client link',
+        }
+    }
+
+    if (advance.status === 'PendingReview') {
+        return {
+            tone: 'primary',
+            title: 'Waiting for review',
+            description: 'Hassil is checking invoice details, repayment path, and trust score.',
+            primaryLabel: null,
+        }
+    }
+
+    if (advance.status === 'Approved') {
+        return {
+            tone: 'success',
+            title: 'Approved for funding',
+            description: 'The request is approved. Move it to funding when you want to demo disbursement.',
+            primaryLabel: 'Simulate disbursement',
+        }
+    }
+
+    if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'Disbursed') {
+        return {
+            tone: 'primary',
+            title: 'Waiting for client payment',
+            description: 'The client pays Hassil on the invoice due date, then the remaining buffer is released.',
+            primaryLabel: 'Simulate client payment',
+        }
+    }
+
+    if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'ClientPaidHassil') {
+        return {
+            tone: 'success',
+            title: 'Release settlement buffer',
+            description: 'Hassil has collected repayment. Release the remaining balance after the fee.',
+            primaryLabel: 'Simulate buffer release',
+        }
+    }
+
+    if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'Disbursed') {
+        return {
+            tone: 'primary',
+            title: 'Waiting for client payment to user',
+            description: 'The client relationship stays private. Hassil waits for the user to receive payment.',
+            primaryLabel: 'Simulate payment detection',
+        }
+    }
+
+    if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'ClientPaymentDetected') {
+        return {
+            tone: 'success',
+            title: 'Repay Hassil',
+            description: 'The client payment was detected. Repay the advance plus the fixed fee.',
+            primaryLabel: 'Simulate repayment',
+        }
+    }
+
+    if (advance.status === 'Rejected') {
+        return {
+            tone: 'warning',
+            title: 'Request rejected',
+            description: advance.rejectionReason ?? 'Review the decision and create a stronger invoice request.',
+            primaryLabel: null,
+        }
+    }
+
+    return {
+        tone: 'success',
+        title: 'Advance settled',
+        description: 'The funding lifecycle is complete. Review the ledger for the final movement.',
+        primaryLabel: null,
+    }
 }
 
 export default function AdvanceDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { user: authUser } = useAuth()
-    const { get: getInvoice, update: updateInvoice } = useInvoices()
-    const { get: getAdvance, update: updateAdvance } = useAdvances()
-    const { transactions: allTransactions, create: createTransaction } = useTransactions()
-    const { getAiSnapshot } = useAdmin()
-    
+    const { get: getInvoice, refetch: refetchInvoices } = useInvoices()
+    const {
+        get: getAdvance,
+        simulateDisbursement,
+        simulateClientPaymentDetected,
+        simulateUserRepayment,
+        simulateClientPaymentToHassil,
+        simulateBufferRelease,
+    } = useAdvances()
+    const { transactions: allTransactions, refetch: refetchTransactions } = useTransactions()
+
     const [advance, setAdvance] = useState<AdvanceRequest | null>(null)
     const [invoice, setInvoice] = useState<Invoice | null>(null)
-    const [aiSnapshot, setAiSnapshot] = useState<AiReviewSnapshot | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [simulating, setSimulating] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     const load = async () => {
         if (!id) return
-        const advData = await getAdvance(id)
-        if (!advData) return
-        setAdvance(advData)
-        
-        const [invData, aiData] = await Promise.all([
-            getInvoice(advData.invoiceId),
-            getAiSnapshot(id)
-        ])
-        
-        if (invData) setInvoice(invData)
-        if (aiData) setAiSnapshot(aiData)
+
+        try {
+            setLoading(true)
+            setError(null)
+
+            const advData = await getAdvance(id)
+            if (!advData) return
+
+            setAdvance(advData)
+
+            const invData = await getInvoice(advData.invoiceId)
+            if (invData) setInvoice(invData)
+        } catch (err: any) {
+            setError(err.message || 'Failed to load advance request')
+        } finally {
+            setLoading(false)
+        }
     }
 
-    useEffect(() => { load() }, [id])
-
-    const transactions = allTransactions.filter((tx) => tx.advanceRequestId === id)
+    useEffect(() => {
+        load()
+    }, [id])
 
     const simulate = async () => {
-        if (!advance || !invoice || !authUser) return
-        const now = new Date().toISOString()
+        if (!advance || simulating) return
 
-        if (advance.status === 'Approved') {
-            await updateAdvance(advance.id, { status: 'Disbursed', updatedAt: now })
-            await updateInvoice(invoice.id, { status: 'Disbursed' })
-            await createTransaction({
-                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
-                type: 'AdvanceDisbursement', direction: 'Credit', amount: advance.advanceAmount,
-                description: `${formatCurrency(advance.advanceAmount, invoice.currency)} sent to bank account.`,
-            })
-        } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'Disbursed') {
-            await updateAdvance(advance.id, { status: 'ClientPaidHassil', updatedAt: now })
-            await updateInvoice(invoice.id, { status: 'ClientPaidHassil' })
-            await createTransaction({
-                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
-                type: 'ClientPaymentToHassil', direction: 'Credit', amount: invoice.amount,
-                description: 'Client paid the invoice to Hassil.',
-            })
-        } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'ClientPaidHassil') {
-            await updateAdvance(advance.id, { status: 'Repaid', updatedAt: now })
-            await updateInvoice(invoice.id, { status: 'Paid' })
-            await createTransaction({
-                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
-                type: 'BufferRelease', direction: 'Credit', amount: advance.settlementBufferAmount,
-                description: 'Remaining buffer released.',
-            })
-        } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'Disbursed') {
-            await updateAdvance(advance.id, { status: 'ClientPaymentDetected', updatedAt: now })
-            await updateInvoice(invoice.id, { status: 'ClientPaymentDetected' })
-            await createTransaction({
-                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
-                type: 'DetectedIncomingPayment', direction: 'Internal', amount: invoice.amount,
-                description: 'Client payment detected in freelancer account.',
-            })
-        } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'ClientPaymentDetected') {
-            await updateAdvance(advance.id, { status: 'Repaid', updatedAt: now })
-            await updateInvoice(invoice.id, { status: 'Paid' })
-            await createTransaction({
-                userId: authUser.id, invoiceId: invoice.id, advanceRequestId: advance.id,
-                type: 'UserRepayment', direction: 'Debit', amount: advance.expectedRepaymentAmount,
-                description: 'Advance and fee repaid after client payment.',
-            })
+        try {
+            setSimulating(true)
+            setError(null)
+
+            let updated: AdvanceRequest | undefined
+
+            if (advance.status === 'Approved') {
+                updated = await simulateDisbursement(advance.id)
+            } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'Disbursed') {
+                updated = await simulateClientPaymentToHassil(advance.id)
+            } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'ClientPaidHassil') {
+                updated = await simulateBufferRelease(advance.id)
+            } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'Disbursed') {
+                updated = await simulateClientPaymentDetected(advance.id)
+            } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'ClientPaymentDetected') {
+                updated = await simulateUserRepayment(advance.id)
+            }
+
+            if (!updated) return
+
+            setAdvance(updated)
+            const invData = await getInvoice(updated.invoiceId)
+            if (invData) setInvoice(invData)
+            await Promise.all([refetchInvoices(), refetchTransactions()])
+        } catch (err: any) {
+            setError(err.message || 'Failed to move advance to the next step')
+        } finally {
+            setSimulating(false)
         }
-        await load()
+    }
+
+    if (loading) {
+        return (
+            <div className="card">
+                <h2 className="card-title">Loading advance</h2>
+                <p className="soft-text mt-8">Fetching the latest request, invoice, and ledger state.</p>
+            </div>
+        )
     }
 
     if (!advance || !invoice) {
         return (
             <div className="card">
                 <h2 className="card-title">Advance not found</h2>
+                {error && <p className="error-text mt-8">{error}</p>}
                 <button className="btn btn-primary mt-16" onClick={() => navigate('/dashboard')}>Back to dashboard</button>
             </div>
         )
     }
 
     const nextLabel = getNextSimulationLabel(advance.status, advance.financingModel)
-    const confirmationToken = invoice.clientConfirmation?.token
+    const transactions = advance.transactions && advance.transactions.length > 0
+        ? advance.transactions
+        : allTransactions.filter((tx) => tx.advanceRequestId === id)
+    const confirmationToken = advance.clientConfirmationToken
+    const nextStep = getAdvanceNextStep(advance)
+    const primaryActionLabel = nextLabel ?? nextStep.primaryLabel
 
     return (
         <>
@@ -154,6 +227,29 @@ export default function AdvanceDetail() {
                 ]}
             />
             <PageHeading title="Advance" description={`${invoice.invoiceNumber} · ${getModelLabel(advance.financingModel)}`} />
+            <section className={`advance-workflow-card ${nextStep.tone}`}>
+                <div>
+                    <span>Current step</span>
+                    <h2>{nextStep.title}</h2>
+                    <p>{nextStep.description}</p>
+                </div>
+                <div className="advance-workflow-actions">
+                    <StatusBadge status={advance.status} />
+                    {advance.status === 'PendingClientConfirmation' && confirmationToken ? (
+                        <button className="btn btn-primary" onClick={() => navigate(`/client/confirm/${confirmationToken}`)}>
+                            <Icon name="link" /> Open client link
+                        </button>
+                    ) : primaryActionLabel ? (
+                        <button className="btn btn-sim" onClick={simulate} disabled={simulating}>
+                            <Icon name="next" /> {simulating ? 'Updating...' : primaryActionLabel}
+                        </button>
+                    ) : (
+                        <button className="btn btn-secondary" onClick={() => navigate('/ledger')}>
+                            <Icon name="ledger" /> Open ledger
+                        </button>
+                    )}
+                </div>
+            </section>
             <LifecycleStepper status={advance.status} model={advance.financingModel} />
             <section className="stat-grid">
                 <StatCard tone="gold" label="Invoice amount" value={formatCurrency(invoice.amount, invoice.currency)} sub={invoice.invoiceNumber} />
@@ -181,34 +277,33 @@ export default function AdvanceDetail() {
                         <DetailGrid
                             items={[
                                 ['Client notification', advance.clientNotificationRequired ? 'Required' : 'Not required'],
+                                ['Client payment redirect', advance.clientPaymentRedirectRequired ? 'Required' : 'Not required'],
+                                ['Fee collection', advance.feeCollectionTiming === 'FromSettlementBuffer' ? 'From settlement buffer' : 'At repayment'],
                                 ['Settlement buffer', formatCurrency(advance.settlementBufferAmount, invoice.currency)],
                                 ['Review score', `${advance.reviewScore}/100`],
                                 ['Approval mode', advance.approvalMode ?? 'N/A'],
                             ]}
                         />
                     </DisclosurePanel>
-                    {confirmationToken && advance.status === 'PendingClientConfirmation' && (
+
+                    {advance.status === 'PendingClientConfirmation' && (
                         <div className="quote-disclaimer mt-16">
-                            Client confirmation is required before funding.
-                            <button
-                                className="btn btn-secondary btn-sm ml-auto"
-                                onClick={() => navigate(`/client/confirm/${confirmationToken}`)}
-                            >
-                                <Icon name="open" /> Open Client Link
-                            </button>
+                            Client confirmation is required before this request can move to review or funding.
+                            {confirmationToken && (
+                                <button
+                                    className="btn btn-secondary btn-sm ml-auto"
+                                    onClick={() => navigate(`/client/confirm/${confirmationToken}`)}
+                                >
+                                    <Icon name="open" /> Open client link
+                                </button>
+                            )}
                         </div>
                     )}
-                    {nextLabel ? (
-                        <button className="btn btn-sim full-width mt-16" onClick={simulate}>
-                            <Icon name="next" /> {nextLabel}
-                        </button>
-                    ) : (
-                        <p className="soft-text mt-16">No next step available for this status.</p>
-                    )}
+
+                    {error && <p className="error-text mt-16">{error}</p>}
                 </div>
                 <div>
-                    {aiSnapshot && <AiReviewCard snapshot={aiSnapshot} />}
-                    <div className="card mt-24">
+                    <div className="card">
                         <div className="card-header">
                             <h2 className="card-title">Timeline</h2>
                             <button className="btn btn-secondary btn-sm" onClick={() => navigate('/ledger')}>Ledger</button>

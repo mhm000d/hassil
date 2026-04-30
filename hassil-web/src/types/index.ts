@@ -5,6 +5,8 @@ export type UserStatus = 'Active' | 'Suspended';
 export type FinancingModel = 'InvoiceDiscounting' | 'InvoiceFactoring';
 export type ReceivableSource = 'DirectClientInvoice' | 'FreelancePlatformPayout';
 export type RepaymentParty = 'User' | 'Client';
+export type PaymentDestination = 'UserBankAccount' | 'HassilCollectionAccount';
+export type FeeCollectionTiming = 'AtUserRepayment' | 'FromSettlementBuffer';
 
 export type InvoiceStatus =
     | 'Draft'
@@ -20,7 +22,8 @@ export type InvoiceStatus =
     | 'ClientPaidHassil'
     | 'BufferReleased'
     | 'Paid'
-    | 'Rejected';
+    | 'Rejected'
+    | 'Cancelled';
 
 export type AdvanceStatus =
     | 'PendingClientConfirmation'
@@ -31,7 +34,8 @@ export type AdvanceStatus =
     | 'ClientPaymentDetected'
     | 'ClientPaidHassil'
     | 'BufferReleased'
-    | 'Repaid';
+    | 'Repaid'
+    | 'Defaulted';
 
 export type ConfirmationStatus = 'Pending' | 'Confirmed' | 'Disputed';
 export type AdminDecision = 'Approved' | 'Rejected' | 'RequestMoreInfo';
@@ -100,6 +104,7 @@ export interface InvoiceDocument {
     id: string;
     invoiceId: string;
     fileName: string;
+    fileUrl?: string;
     documentType: string;
     uploadedAt: string;
 }
@@ -119,8 +124,11 @@ export interface Invoice {
     paymentTerms?: string;
     status: InvoiceStatus;
     fingerprint: string;
+    invoiceFingerprint?: string;
     createdAt: string;
+    updatedAt?: string;
     documents: InvoiceDocument[];
+    documentCount?: number;
     clientConfirmation?: ClientConfirmation;
     advanceRequestId?: string;
 }
@@ -128,10 +136,14 @@ export interface Invoice {
 export interface AdvanceRequest {
     id: string;
     invoiceId: string;
+    invoiceNumber?: string;
     userId: string;
     financingModel: FinancingModel;
     repaymentParty: RepaymentParty;
+    paymentDestination?: PaymentDestination;
+    feeCollectionTiming?: FeeCollectionTiming;
     clientNotificationRequired: boolean;
+    clientPaymentRedirectRequired?: boolean;
     requestedPercent: number;
     advanceAmount: number;
     feeRate: number;
@@ -141,8 +153,13 @@ export interface AdvanceRequest {
     reviewScore: number;
     approvalMode?: 'Auto' | 'Manual';
     status: AdvanceStatus;
+    clientConfirmationToken?: string;
+    clientConfirmationStatus?: ConfirmationStatus;
     rejectionReason?: string;
+    reviewedAt?: string;
     termsAcceptedAt?: string;
+    termsVersion?: string;
+    transactions?: Transaction[];
     createdAt: string;
     updatedAt: string;
 }
@@ -151,6 +168,7 @@ export interface Transaction {
     id: string;
     userId: string;
     invoiceId?: string;
+    invoiceNumber?: string;
     advanceRequestId?: string;
     type: TransactionType;
     direction: TransactionDirection;
@@ -164,6 +182,7 @@ export interface TrustScoreEvent {
     userId: string;
     oldScore: number;
     newScore: number;
+    delta?: number;
     reason: string;
     createdAt: string;
 }
@@ -249,6 +268,29 @@ export interface DashboardAppState {
     transactions: DashboardTransaction[]
 }
 
+export interface DashboardMoneyMetric {
+    count: number;
+    amount: number;
+}
+
+export interface DashboardReviewState {
+    pendingClientConfirmation: number;
+    pendingReview: number;
+    approvedReadyForDisbursement: number;
+}
+
+export interface DashboardSummary {
+    accountType: AccountType;
+    financingModel: FinancingModel;
+    trustScore: number;
+    ledgerBalance: number;
+    outstandingInvoices: DashboardMoneyMetric;
+    activeAdvances: DashboardMoneyMetric;
+    expectedRepayments: DashboardMoneyMetric;
+    reviewStates: DashboardReviewState;
+    recentTransactions: Transaction[];
+}
+
 export interface Toast {
     id: string;
     message: string;
@@ -272,15 +314,21 @@ export interface AppState {
 }
 
 export interface AdvanceQuote {
+    invoiceId: string;
     financingModel: FinancingModel;
     repaymentParty: RepaymentParty;
+    paymentDestination: PaymentDestination;
+    feeCollectionTiming: FeeCollectionTiming;
     clientNotificationRequired: boolean;
+    clientPaymentRedirectRequired: boolean;
     requestedPercent: number;
+    maxAdvancePercent: number;
     advanceAmount: number;
     feeRate: number;
     feeAmount: number;
     settlementBufferAmount: number;
     expectedRepaymentAmount: number;
     maxEligibleInvoiceAmount: number;
-    modelLabel: string;
+    isEligible: boolean;
+    eligibilityMessages: string[];
 }

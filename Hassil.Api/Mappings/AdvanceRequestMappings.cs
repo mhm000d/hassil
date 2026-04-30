@@ -55,6 +55,8 @@ public static class AdvanceRequestMappings
         ReviewScore:                   request.ReviewScore,
         ApprovalMode:                  request.ApprovalMode?.ToString(),
         Status:                        request.Status.ToString(),
+        ClientConfirmationToken:       request.Invoice.ClientConfirmation?.Token,
+        ClientConfirmationStatus:      request.Invoice.ClientConfirmation?.Status.ToString(),
         RejectionReason:               request.RejectionReason,
         ReviewedAt:                    request.ReviewedAt,
         TermsAcceptedAt:               request.TermsAcceptedAt,

@@ -1,88 +1,205 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Invoice } from '../types'
-import {
-    mockUsers,
-    generateId,
-    formatCurrency,
-    daysUntilDate,
-    calculateQuote,
-} from '../data/mockApi'
-import { useAuth } from '../hooks'
-import { InvoiceService } from '../services/invoiceService'
+import { daysUntilDate, formatCurrency, formatDate } from '../utils/formatters'
+import { useInvoices } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Icon from '../components/Icon'
 
-function createFingerprint(invoiceNumber: string, clientEmail: string, amount: number, dueDate: string, source: string) {
-    return `${invoiceNumber}-${clientEmail}-${amount}-${dueDate}-${source}`
+function dateInputValue(daysFromToday: number) {
+    const date = new Date()
+    date.setDate(date.getDate() + daysFromToday)
+    return date.toISOString().slice(0, 10)
+}
+
+function uniqueInvoiceToken() {
+    const random = crypto.getRandomValues(new Uint32Array(1))[0].toString(36)
+    return `${Date.now().toString(36)}${random}`.toUpperCase()
+}
+
+function buildStarterInvoiceForm() {
+    const token = uniqueInvoiceToken()
+    return {
+        clientName: 'Noura Retail Group',
+        clientEmail: `ap.${token.toLowerCase()}@nouraretail.sa`,
+        clientCountry: 'Saudi Arabia',
+        invoiceNumber: `AHM-${token.slice(-8)}`,
+        receivableSource: 'DirectClientInvoice' as Invoice['receivableSource'],
+        amount: 16000,
+        currency: 'USD',
+        issueDate: dateInputValue(0),
+        dueDate: dateInputValue(45),
+        description: 'Campaign assets delivered and approved by client.',
+        paymentTerms: 'Net 45',
+        hasEvidence: false,
+    }
+}
+
+function InvoiceFlowSteps({
+    submitted,
+    evidenceReady,
+}: {
+    submitted: boolean
+    evidenceReady: boolean
+}) {
+    const steps = [
+        { label: 'Invoice details', state: submitted ? 'done' : 'active' },
+        { label: 'Evidence optional', state: submitted || evidenceReady ? 'done' : 'pending' },
+        { label: 'Submit', state: submitted ? 'done' : 'pending' },
+    ]
+
+    return (
+        <div className="invoice-flow-steps">
+            {steps.map((step, index) => (
+                <div key={step.label} className={`invoice-flow-step ${step.state}`}>
+                    <span>{index + 1}</span>
+                    <p>{step.label}</p>
+                </div>
+            ))}
+        </div>
+    )
 }
 
 export default function NewInvoice() {
     const navigate = useNavigate()
-    const { user: currentUser } = useAuth()
-    const actualUser = currentUser || mockUsers[0]
-    
-    const [form, setForm] = useState({
-        clientName: 'Noura Retail Group',
-        clientEmail: 'ap@nouraretail.sa',
-        clientCountry: 'Saudi Arabia',
-        invoiceNumber: `AHM-2026-${Math.floor(100 + Math.random() * 200)}`,
-        receivableSource: 'DirectClientInvoice' as Invoice['receivableSource'],
-        amount: 16000,
-        currency: 'USD',
-        issueDate: '2026-04-28',
-        dueDate: '2026-06-12',
-        description: 'Campaign assets delivered and approved by client.',
-        paymentTerms: 'Net 45',
-        hasEvidence: true,
-    })
+    const { create, addDocument, submit: submitInvoice } = useInvoices()
+    const [submitError, setSubmitError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
+    const [createdInvoice, setCreatedInvoice] = useState<Invoice | null>(null)
+    const [form, setForm] = useState(buildStarterInvoiceForm)
 
-    const fingerprint = createFingerprint(form.invoiceNumber, form.clientEmail, Number(form.amount) || 0, form.dueDate, form.receivableSource)
-    const quote = calculateQuote(actualUser, { ...form, id: '', userId: '', clientId: '', client: { id: '', name: form.clientName, email: form.clientEmail }, status: 'Submitted', fingerprint, createdAt: '', documents: [] } as Invoice)
     const dueDays = daysUntilDate(form.dueDate)
 
     const errors = [
         Number(form.amount) <= 0 ? 'Amount must be greater than zero.' : '',
         new Date(form.dueDate).getTime() <= new Date(form.issueDate).getTime() ? 'Due date must be after the issue date.' : '',
         dueDays < 0 ? 'Due date cannot be in the past.' : '',
-        !form.hasEvidence ? 'Attach invoice evidence before submitting.' : '',
     ].filter(Boolean) as string[]
 
     const warnings = [
-        Number(form.amount) > quote.maxEligibleInvoiceAmount * 0.85
-            ? `Amount is close to the ${formatCurrency(quote.maxEligibleInvoiceAmount, form.currency)} limit.`
-            : '',
         dueDays > 75 ? 'Long payment terms may require extra review.' : '',
     ].filter(Boolean) as string[]
 
+    const requiredFieldsReady = Boolean(
+        form.invoiceNumber.trim()
+        && form.clientName.trim()
+        && form.clientEmail.trim()
+        && form.issueDate
+        && form.dueDate
+        && form.currency
+        && Number(form.amount) > 0,
+    )
+    const readyForSubmit = requiredFieldsReady && errors.length === 0
+
     const submit = async (e: FormEvent) => {
         e.preventDefault()
-        if (errors.length > 0) return
+        setSubmitError('')
+        if (!readyForSubmit || submitting) return
 
-        const invoiceId = generateId('inv')
-        const invoice: Partial<Invoice> = {
-            id: invoiceId,
-            clientId: generateId('client'),
-            client: { id: '', name: form.clientName, email: form.clientEmail, country: form.clientCountry },
-            invoiceNumber: form.invoiceNumber,
-            receivableSource: form.receivableSource,
-            amount: Number(form.amount),
-            currency: form.currency,
-            issueDate: form.issueDate,
-            dueDate: form.dueDate,
-            description: form.description,
-            paymentTerms: form.paymentTerms,
-            status: 'Submitted',
-            fingerprint,
+        setSubmitting(true)
+        try {
+            const created = await create({
+                clientName: form.clientName,
+                clientEmail: form.clientEmail,
+                clientCountry: form.clientCountry,
+                invoiceNumber: form.invoiceNumber,
+                receivableSource: form.receivableSource,
+                amount: Number(form.amount),
+                currency: form.currency,
+                issueDate: form.issueDate,
+                dueDate: form.dueDate,
+                description: form.description,
+                paymentTerms: form.paymentTerms,
+            })
+
+            if (form.hasEvidence) {
+                await addDocument(created.id, {
+                    fileName: `${form.invoiceNumber}-evidence.pdf`,
+                    documentType: 'Supporting Evidence',
+                })
+            }
+
+            const submitted = await submitInvoice(created.id)
+            setCreatedInvoice(submitted)
+        } catch (err: any) {
+            setSubmitError(err.message || 'Could not create invoice.')
+        } finally {
+            setSubmitting(false)
         }
-        await InvoiceService.create(invoice as Invoice)
-        navigate(`/invoices/${invoiceId}`)
+    }
+
+    const createAnother = () => {
+        setCreatedInvoice(null)
+        setSubmitError('')
+        setSubmitting(false)
+        setForm(buildStarterInvoiceForm())
+    }
+
+    if (createdInvoice) {
+        return (
+            <>
+                <Breadcrumbs
+                    items={[
+                        { label: 'Invoices', onClick: () => navigate('/invoices') },
+                        { label: 'Create invoice' },
+                        { label: 'Submitted' },
+                    ]}
+                />
+                <PageHeading
+                    title="Invoice submitted"
+                    description="The invoice is ready for an advance quote, or you can keep adding invoices."
+                />
+                <InvoiceFlowSteps submitted evidenceReady />
+                <div className="invoice-success-card">
+                    <div className="invoice-success-icon">
+                        <Icon name="check" />
+                    </div>
+                    <div className="invoice-success-body">
+                        <div className="card-header">
+                            <div>
+                                <h2 className="card-title">{createdInvoice.invoiceNumber}</h2>
+                                <p className="soft-text mt-8">
+                                    {createdInvoice.client.name} · due {formatDate(createdInvoice.dueDate)}
+                                </p>
+                            </div>
+                            <span className="quote-pill success">Submitted</span>
+                        </div>
+                        <div className="invoice-success-summary">
+                            <div>
+                                <span>Invoice amount</span>
+                                <strong>{formatCurrency(createdInvoice.amount, createdInvoice.currency)}</strong>
+                            </div>
+                            <div>
+                                <span>Optional evidence</span>
+                                <strong>{createdInvoice.documentCount ?? createdInvoice.documents.length} file</strong>
+                            </div>
+                            <div>
+                                <span>Next step</span>
+                                <strong>Advance quote</strong>
+                            </div>
+                        </div>
+                        <div className="invoice-success-actions">
+                            <button className="btn btn-primary" onClick={() => navigate(`/invoices/${createdInvoice.id}/advance`)}>
+                                <Icon name="advance" /> Request advance
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => navigate(`/invoices/${createdInvoice.id}`)}>
+                                <Icon name="open" /> View invoice
+                            </button>
+                            <button className="btn btn-ghost" onClick={createAnother}>
+                                <Icon name="plus" /> Create another invoice
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </>
+        )
     }
 
     return (
         <>
-            <PageHeading title="Create invoice" description="Enter invoice details and attach evidence for review." />
+            <PageHeading title="Create and submit invoice" description="Enter the invoice details once, then move directly to the advance quote." />
+            <InvoiceFlowSteps submitted={false} evidenceReady={form.hasEvidence} />
             <form className="card form-card" onSubmit={submit}>
                 <Breadcrumbs items={[{ label: 'Invoices', onClick: () => navigate('/invoices') }, { label: 'Create invoice' }]} />
                 <div className="form-grid-2">
@@ -141,18 +258,22 @@ export default function NewInvoice() {
                 </div>
                 <label className="checkbox-row mb-18">
                     <input type="checkbox" checked={form.hasEvidence} onChange={(e) => setForm({ ...form, hasEvidence: e.target.checked })} />
-                    <span>Invoice evidence is attached.</span>
+                    <span>Attach evidence file (optional).</span>
                 </label>
-                {(errors.length > 0 || warnings.length > 0) && (
+                <p className="soft-text mb-18">
+                    You can continue without this. Attach a file only when supporting evidence is available.
+                </p>
+                {(errors.length > 0 || warnings.length > 0 || submitError) && (
                     <div className="feedback-list mb-18">
+                        {submitError && <div className="feedback-item error">{submitError}</div>}
                         {errors.map((err) => <div className="feedback-item error" key={err}>{err}</div>)}
                         {warnings.map((w) => <div className="feedback-item warning" key={w}>{w}</div>)}
                     </div>
                 )}
                 <div className="form-actions">
-                    <button type="button" className="btn btn-ghost" onClick={() => navigate('/invoices')}>Cancel</button>
-                    <button className="btn btn-primary" type="submit" disabled={errors.length > 0}>
-                        <Icon name="plus" /> Create Invoice
+                    <button type="button" className="btn btn-ghost" onClick={() => navigate('/invoices')}>Back to invoices</button>
+                    <button className="btn btn-primary" type="submit" disabled={!readyForSubmit || submitting}>
+                        <Icon name="plus" /> {submitting ? 'Submitting...' : 'Create and submit'}
                     </button>
                 </div>
             </form>

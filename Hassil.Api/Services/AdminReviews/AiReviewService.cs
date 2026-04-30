@@ -39,18 +39,15 @@ public class AiReviewService(IAdvanceCalculatorService calculator) : IAiReviewSe
         var flags = new List<string>();
         var invoice = advanceRequest.Invoice;
         var daysUntilDue = invoice.DueDate.DayNumber - DateOnly.FromDateTime(DateTime.UtcNow).DayNumber;
-        var quote = calculator.Calculate(advanceRequest.User, invoice, requestedPercent: null);
+        var quote = calculator.Calculate(advanceRequest.User, invoice, advanceRequest.RequestedPercent);
 
         flags.AddRange(quote.EligibilityMessages);
-
-        if (invoice.Documents.Count == 0)
-            flags.Add("Supporting document is missing.");
 
         if (advanceRequest.User.TrustScore < 50)
             flags.Add("User trust score is below auto-approval threshold.");
 
-        if (invoice.Amount >= quote.MaxEligibleInvoiceAmount * 0.9m)
-            flags.Add("Invoice amount is close to the current trust-based limit.");
+        if (advanceRequest.AdvanceAmount >= quote.MaxEligibleInvoiceAmount * 0.9m)
+            flags.Add("Requested advance is close to the current trust-based funding limit.");
 
         if (daysUntilDue < 0)
             flags.Add("Invoice due date is in the past.");
@@ -78,7 +75,7 @@ public class AiReviewService(IAdvanceCalculatorService calculator) : IAiReviewSe
         {
             return
                 $"{riskLevel} risk. Recommend {recommendedAction}: request score is {advanceRequest.ReviewScore}, " +
-                "terms are accepted, evidence is present, and no major review flags were detected.";
+                "terms are accepted, and no major review flags were detected.";
         }
 
         return

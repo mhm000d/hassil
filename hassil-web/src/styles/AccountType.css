@@ -8,6 +8,7 @@
 .account-type-features { list-style: none; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); display: grid; gap: 6px; }
 .account-type-features li { color: var(--gray); font-size: 0.86rem; display: flex; gap: 8px; }
 .account-type-features li::before { content: '→'; color: var(--teal); font-weight: 800; }
+.account-type-action { display: inline-flex; margin-top: 20px; color: var(--teal); font-size: 0.88rem; font-weight: 800; }
 
 .account-type-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; margin-bottom: 16px; }
 .blue-soft, .gold-soft { background: var(--teal-light); color: var(--teal); border: 1px solid var(--teal-mid); }

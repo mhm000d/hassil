@@ -3,8 +3,84 @@
   background: var(--color-white);
 }
 
+.business-model {
+  display: grid;
+  gap: 28px;
+  margin-bottom: 48px;
+}
+
+.business-model__eyebrow {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.business-model h2 {
+  max-width: 720px;
+  color: var(--color-gray-900);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+
+.business-model p {
+  max-width: 760px;
+  color: var(--color-gray-600);
+  line-height: 1.7;
+}
+
+.business-model__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.business-model__card {
+  display: grid;
+  gap: 8px;
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.business-model__card h3 {
+  color: var(--color-gray-900);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.business-model__card p {
+  color: var(--color-gray-600);
+  font-size: 0.9rem;
+}
+
+.business-model__card strong {
+  color: var(--color-primary);
+  font-size: 1rem;
+}
+
+.business-model__card span {
+  color: var(--color-gray-700);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.business-model__market {
+  padding: 18px 20px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-md);
+  color: #713f12 !important;
+  font-weight: 700;
+}
+
 .cta__inner {
-  background: linear-gradient(135deg, #0D3320 0%, #1B5E3B 40%, #0F4D2E 100%);
+  background: linear-gradient(135deg, #102a43 0%, #1B5E3B 100%);
   border-radius: var(--radius-xl);
   padding: 64px 48px;
   text-align: center;
@@ -12,45 +88,14 @@
   overflow: hidden;
 }
 
-/* Decorative glow */
-.cta__inner::before {
-  content: '';
-  position: absolute;
-  top: -40%;
-  right: -20%;
-  width: 60%;
-  height: 120%;
-  background: radial-gradient(
-    ellipse,
-    rgba(22, 163, 74, 0.2) 0%,
-    transparent 60%
-  );
-  pointer-events: none;
-}
-
-.cta__inner::after {
-  content: '';
-  position: absolute;
-  bottom: -30%;
-  left: -10%;
-  width: 50%;
-  height: 100%;
-  background: radial-gradient(
-    ellipse,
-    rgba(255, 255, 255, 0.04) 0%,
-    transparent 60%
-  );
-  pointer-events: none;
-}
-
 .cta__title {
-  font-size: 2.2rem;
+  font-size: 2rem;
   font-weight: 800;
   color: var(--color-white);
   margin-bottom: 16px;
   position: relative;
   z-index: 1;
-  max-width: 500px;
+  max-width: 760px;
   margin-left: auto;
   margin-right: auto;
   line-height: 1.2;
@@ -109,6 +154,10 @@
 }
 
 @media (max-width: 640px) {
+  .business-model__grid {
+    grid-template-columns: 1fr;
+  }
+
   .cta__inner {
     padding: 48px 24px;
   }

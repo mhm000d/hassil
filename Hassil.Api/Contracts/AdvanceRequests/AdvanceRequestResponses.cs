@@ -51,6 +51,8 @@ public record AdvanceRequestResponse(
     int ReviewScore,
     string? ApprovalMode,
     string Status,
+    string? ClientConfirmationToken,
+    string? ClientConfirmationStatus,
     string? RejectionReason,
     DateTimeOffset? ReviewedAt,
     DateTimeOffset? TermsAcceptedAt,

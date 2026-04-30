@@ -1,5 +1,5 @@
 import type { FinancingModel } from '../types'
-import { getModelLabel } from '../data/mockApi'
+import { getModelLabel } from '../utils/formatters'
 
 export default function ModelBadge({ model }: { model: FinancingModel }) {
     return (

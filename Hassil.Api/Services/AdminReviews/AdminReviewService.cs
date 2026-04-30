@@ -186,7 +186,7 @@ public class AdminReviewService(
     private IReadOnlyList<ReviewChecklistItem> BuildChecklist(AdvanceRequest advance)
     {
         var invoice = advance.Invoice;
-        var quote = calculator.Calculate(advance.User, invoice, requestedPercent: null);
+        var quote = calculator.Calculate(advance.User, invoice, advance.RequestedPercent);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var daysUntilDue = invoice.DueDate.DayNumber - today.DayNumber;
         var confirmationPassed = advance.FinancingModel != FinancingModel.InvoiceFactoring
@@ -205,17 +205,17 @@ public class AdminReviewService(
                     ? "The user has not accepted advance terms."
                     : $"Accepted version {advance.TermsVersion}."),
             new(
-                "Supporting evidence attached",
-                invoice.Documents.Count > 0,
-                $"{invoice.Documents.Count} document(s) attached."),
+                "Supporting evidence is optional",
+                true,
+                $"{invoice.Documents.Count} optional document(s) attached."),
             new(
                 "Due date is within the 90-day window",
                 daysUntilDue is >= 0 and <= 90,
                 $"{daysUntilDue} day(s) until due date."),
             new(
-                "Invoice amount is within current limit",
-                invoice.Amount <= quote.MaxEligibleInvoiceAmount,
-                $"Invoice amount {invoice.Amount:0.00} {invoice.Currency}; limit {quote.MaxEligibleInvoiceAmount:0.00} {invoice.Currency}."),
+                "Requested advance is within current funding limit",
+                advance.AdvanceAmount <= quote.MaxEligibleInvoiceAmount,
+                $"Requested advance {advance.AdvanceAmount:0.00} {invoice.Currency}; limit {quote.MaxEligibleInvoiceAmount:0.00} {invoice.Currency}."),
             new(
                 "Trust score supports approval",
                 advance.User.TrustScore >= 50,
