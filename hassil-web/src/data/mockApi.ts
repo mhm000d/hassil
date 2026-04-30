@@ -847,6 +847,22 @@ export const mockApi = {
     },
 
     // Client confirmation
+    createClientConfirmation(invoiceId: string, clientEmail: string): Promise<ApiResponse<Invoice | undefined>> {
+        const token = generateId('confirm-token')
+        const confirmation: NonNullable<Invoice['clientConfirmation']> = {
+            id: generateId('conf'),
+            invoiceId,
+            token,
+            clientEmail,
+            status: 'Pending',
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+        _invoices = _invoices.map((inv) =>
+            inv.id === invoiceId ? { ...inv, clientConfirmation: confirmation } : inv,
+        )
+        saveState()
+        return Promise.resolve(ok(_invoices.find((inv) => inv.id === invoiceId)))
+    },
     getClientConfirmation(token: string): Promise<ApiResponse<{ invoice: Invoice; confirmation: Invoice['clientConfirmation'] } | undefined>> {
         const invoice = _invoices.find((inv) => inv.clientConfirmation?.token === token)
         if (!invoice) return Promise.resolve(ok(undefined))

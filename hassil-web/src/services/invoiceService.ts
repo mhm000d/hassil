@@ -19,5 +19,8 @@ export const InvoiceService = {
     },
     addDocument: async (id: string, doc: { fileName: string; documentType: string }) => {
         return await api.post<Invoice>(`/invoices/${id}/documents`, doc)
+    },
+    createClientConfirmation: async (id: string, clientEmail: string) => {
+        return await api.post<Invoice>(`/invoices/${id}/client-confirmation`, { clientEmail })
     }
 }

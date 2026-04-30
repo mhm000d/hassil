@@ -18,6 +18,7 @@ import AdminLogin from './pages/AdminLogin'
 import FreelancerOnboarding from './pages/FreelancerOnboarding'
 import SmallBusinessOnboarding from './pages/SmallBusinessOnboarding'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 
 function App() {
     return (
@@ -44,8 +45,10 @@ function App() {
                         <Route path="/invoices/:id" element={<InvoiceDetail />} />
                         <Route path="/invoices/:id/advance" element={<InvoiceAdvance />} />
                         <Route path="/advances/:id" element={<AdvanceDetail />} />
-                        <Route path="/admin" element={<AdminReview />} />
-                        <Route path="/admin/:advanceId" element={<AdminReview />} />
+                        <Route element={<AdminRoute />}>
+                            <Route path="/admin" element={<AdminReview />} />
+                            <Route path="/admin/:advanceId" element={<AdminReview />} />
+                        </Route>
                         <Route path="/ledger" element={<Ledger />} />
                         <Route path="/cash-flow" element={<CashFlow />} />
                         <Route path="*" element={<Navigate to="/dashboard" replace />} />

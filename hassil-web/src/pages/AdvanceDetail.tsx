@@ -15,7 +15,6 @@ import ModelBadge from '../components/ModelBadge'
 import DetailGrid from '../components/DetailGrid'
 import DisclosurePanel from '../components/DisclosurePanel'
 import LifecycleStepper from '../components/LifecycleStepper'
-import TransactionTimeline from '../components/TransactionTimeline'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Icon from '../components/Icon'
 
@@ -32,12 +31,10 @@ function StatCard({ tone, label, value, sub }: { tone: 'gold' | 'green' | 'amber
 }
 
 function AiReviewCard({ snapshot }: { snapshot: AiReviewSnapshot }) {
-    const statusMap = { Low: 'Approved', Medium: 'PendingReview', High: 'Rejected' } as const
     return (
         <div className="ai-review-card">
             <div className="ai-review-header">
                 <span className="ai-badge">AI Review Assistant</span>
-                <StatusBadge status={statusMap[snapshot.riskLevel]} />
             </div>
             <h2 className="card-title">Recommended: {snapshot.recommendedAction}</h2>
             <p className="ai-review-summary">{snapshot.summary}</p>
@@ -52,6 +49,15 @@ function AiReviewCard({ snapshot }: { snapshot: AiReviewSnapshot }) {
     )
 }
 
+function AiRecommendationCollapsible({ snapshot }: { snapshot: AiReviewSnapshot }) {
+    return (
+        <div className="card" style={{ marginBottom: 24 }}>
+            <h2 className="card-title">AI Recommendation</h2>
+            <div className="mt-16"><AiReviewCard snapshot={snapshot} /></div>
+        </div>
+    )
+}
+
 export default function AdvanceDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
@@ -61,24 +67,25 @@ export default function AdvanceDetail() {
     const { advances, refetch: refetchAdvances,
             simulateDisbursement, simulateClientPaymentDetected,
             simulateUserRepayment, simulateClientPaidHassil,
-            simulateBufferRelease } = useAdvances()
-    const { invoices, refetch: refetchInvoices } = useInvoices()
-    const { transactions, refetch: refetchTransactions } = useTransactions()
+            simulateBufferRelease, update: updateAdvance } = useAdvances()
+    const { invoices, update: updateInvoice, refetch: refetchInvoices } = useInvoices()
+    const { refetch: refetchTransactions } = useTransactions()
     const { getAiSnapshot } = useAdmin()
 
     const [aiSnapshot, setAiSnapshot] = useState<AiReviewSnapshot | null>(null)
     const [simulating, setSimulating] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const [sendSimulated, setSendSimulated] = useState(false)
 
     // Derive advance and invoice directly from context arrays — no local copies needed
     const advance = advances.find((a) => a.id === id) ?? null
     const invoice = advance ? invoices.find((inv) => inv.id === advance.invoiceId) ?? null : null
-    const advanceTransactions = transactions.filter((tx) => tx.advanceRequestId === id)
 
     // Refresh all context data on mount so this page always shows fresh state
     useEffect(() => {
-        refetchAdvances()
-        refetchInvoices()
-        refetchTransactions()
+        setLoading(true)
+        Promise.all([refetchAdvances(), refetchInvoices(), refetchTransactions()])
+            .finally(() => setLoading(false))
     }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Load AI snapshot separately (fetched on demand, not stored in context)
@@ -111,16 +118,24 @@ export default function AdvanceDetail() {
         }
     }
 
+    if (loading) {
+        return <div className="loading-state">Loading advance...</div>
+    }
+
     if (!advance || !invoice) {
         return (
             <div className="card">
-                <h2 className="card-title">Fetching Advance Details...</h2>
+                <h2 className="card-title">Advance not found</h2>
+                <button className="btn btn-primary mt-16" onClick={() => navigate('/invoices')}>Back to invoices</button>
             </div>
         )
     }
 
     const nextLabel = getNextSimulationLabel(advance.status, advance.financingModel)
-    const confirmationToken = invoice.clientConfirmation?.token
+
+    const confirmPending = invoice.clientConfirmation?.status === 'Pending'
+    const notSentYet = advance.status === 'PendingReview' && confirmPending
+    const awaitingClient = advance.status === 'PendingClientConfirmation' && confirmPending
 
     return (
         <>
@@ -138,7 +153,7 @@ export default function AdvanceDetail() {
                 <StatCard tone="green" label="Advance amount" value={formatCurrency(advance.advanceAmount, invoice.currency)} sub={`${Math.round(advance.requestedPercent * 100)}% requested`} />
                 <StatCard tone="amber" label="Flat fee" value={formatCurrency(advance.feeAmount, invoice.currency)} sub={`${(advance.feeRate * 100).toFixed(1)}% fixed upfront`} />
             </section>
-            <div className="grid-2 wide-left">
+            <div className="grid-2" style={{ gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 0.75fr)' }}>
                 <div className="card">
                     <div className="card-header">
                         <div>
@@ -155,7 +170,7 @@ export default function AdvanceDetail() {
                             ['Expected repayment', formatCurrency(advance.expectedRepaymentAmount, invoice.currency)],
                         ]}
                     />
-                    <DisclosurePanel title="More advance details">
+                    <DisclosurePanel title="More advance details" noDivider>
                         <DetailGrid
                             items={[
                                 ['Client notification', advance.clientNotificationRequired ? 'Required' : 'Not required'],
@@ -165,48 +180,112 @@ export default function AdvanceDetail() {
                             ]}
                         />
                     </DisclosurePanel>
-                    {confirmationToken && advance.status === 'PendingClientConfirmation' && (
-                        <div className="quote-disclaimer mt-16">
-                            Client confirmation is required before funding.
-                            <button
-                                className="btn btn-secondary btn-sm ml-auto"
-                                onClick={() => navigate(`/client/confirm/${confirmationToken}`)}
-                            >
-                                <Icon name="open" /> Open Client Link
-                            </button>
-                        </div>
-                    )}
-                    {nextLabel ? (
-                        <div className="simulation-panel mt-16">
-                            <div className="simulation-header">
-                                <Icon name="settings" />
-                                <span>Lifecycle Simulator</span>
+
+                    {/* ── Action panel ── */}
+                    <div className="disclosure-panel">
+                        <h2 className="card-title">Next step</h2>
+                        {notSentYet && (
+                            <div className="simulation-panel mt-16">
+                                <div className="simulation-header">
+                                    <Icon name="link" />
+                                    <span>Send confirmation to client</span>
+                                </div>
+                                <p className="simulation-text">
+                                    Advance submitted. <strong>{invoice.client.name}</strong> ({invoice.client.email}) must confirm before funding can proceed.
+                                </p>
+                                <button
+                                    className="btn btn-secondary full-width mt-8"
+                                    onClick={() => navigate(`/client/confirm/${invoice.clientConfirmation!.token}?from=${invoice.id}`)}
+                                >
+                                    <Icon name="open" /> Preview client confirmation page
+                                </button>
+                                {sendSimulated ? (
+                                    <div className="simulation-panel success mt-8">
+                                        <Icon name="check" />
+                                        <span>Link sent to {invoice.client.email}</span>
+                                    </div>
+                                ) : (
+                                    <button
+                                        className="btn btn-primary full-width mt-8"
+                                        onClick={async () => {
+                                            const now = new Date().toISOString()
+                                            await updateAdvance(advance.id, { status: 'PendingClientConfirmation', updatedAt: now })
+                                            await updateInvoice(invoice.id, { status: 'PendingClientConfirmation' })
+                                            await refetchInvoices()
+                                            setSendSimulated(true)
+                                        }}
+                                    >
+                                        <Icon name="advance" /> Send to {invoice.client.email}
+                                    </button>
+                                )}
                             </div>
-                            <p className="simulation-text">Trigger the next phase of the financing lifecycle to test state transitions and ledger entries.</p>
-                            <button className="btn btn-sim full-width" onClick={simulate} disabled={simulating}>
-                                <Icon name="next" /> {simulating ? 'Processing...' : nextLabel}
-                            </button>
-                        </div>
-                    ) : (
-                        advance.status === 'Repaid' ? (
-                            <div className="simulation-panel success mt-16">
-                                <Icon name="check" />
-                                <span>Lifecycle Completed</span>
+                        )}
+                        {awaitingClient && (
+                            <div className="simulation-panel mt-16">
+                                <div className="simulation-header">
+                                    <Icon name="check" />
+                                    <span>Awaiting client confirmation</span>
+                                </div>
+                                <p className="simulation-text">
+                                    Link sent to <strong>{invoice.client.email}</strong>. Waiting for their confirmation before the advance can be reviewed.
+                                </p>
                             </div>
-                        ) : (
-                            <p className="soft-text mt-16">No next step available for this status.</p>
-                        )
-                    )}
+                        )}
+                        {!notSentYet && !awaitingClient && nextLabel && (
+                            <div className="simulation-panel mt-16">
+                                <div className="simulation-header">
+                                    <Icon name="settings" />
+                                    <span>Lifecycle Simulator</span>
+                                </div>
+                                <p className="simulation-text">Trigger the next phase of the financing lifecycle to test state transitions and ledger entries.</p>
+                                <button className="btn btn-sim full-width" onClick={simulate} disabled={simulating}>
+                                    <Icon name="next" /> {simulating ? 'Processing...' : nextLabel}
+                                </button>
+                            </div>
+                        )}
+                        {!notSentYet && !awaitingClient && !nextLabel && (
+                            (() => {
+                                if (advance.status === 'Repaid' || advance.status === 'BufferReleased') {
+                                    return (
+                                        <div className="simulation-panel success mt-16">
+                                            <Icon name="check" />
+                                            <span>Lifecycle Completed</span>
+                                        </div>
+                                    )
+                                }
+                                const messages: Record<string, { icon: 'check' | 'settings' | 'review' | 'next'; title: string; body: string }> = {
+                                    PendingReview:         { icon: 'review',   title: 'Under review',                    body: 'Your advance request is being reviewed by the Hassil team.' },
+                                    Approved:              { icon: 'next',     title: 'Approved — awaiting disbursement', body: 'The advance has been approved. Disbursement will be processed shortly.' },
+                                    Disbursed:             { icon: 'check',    title: 'Advance funded',                   body: 'The advance has been sent to your bank account.' },
+                                    ClientPaymentDetected: { icon: 'settings', title: 'Payment detected',                 body: 'Client payment has been detected. Repayment is being processed.' },
+                                    ClientPaidHassil:      { icon: 'settings', title: 'Client paid Hassil',               body: 'Client payment received. Settlement buffer will be released shortly.' },
+                                    Rejected:              { icon: 'review',   title: 'Advance rejected',                 body: advance.rejectionReason ?? 'The advance request was not approved.' },
+                                }
+                                const msg = messages[advance.status]
+                                if (!msg) return <p className="soft-text mt-16">No next step available for this status.</p>
+                                return (
+                                    <div className={`simulation-panel mt-16${advance.status === 'Disbursed' ? ' success' : ''}`}>
+                                        <div className="simulation-header">
+                                            <Icon name={msg.icon} />
+                                            <span>{msg.title}</span>
+                                        </div>
+                                        <p className="simulation-text">{msg.body}</p>
+                                        {advance.status === 'Rejected' && (
+                                            <button
+                                                className="btn btn-primary full-width mt-8"
+                                                onClick={() => navigate(`/invoices/${invoice.id}/advance`)}
+                                            >
+                                                <Icon name="advance" /> Request new advance
+                                            </button>
+                                        )}
+                                    </div>
+                                )
+                            })()
+                        )}
+                    </div>
                 </div>
                 <div>
-                    {aiSnapshot && <AiReviewCard snapshot={aiSnapshot} />}
-                    <div className="card mt-24">
-                        <div className="card-header">
-                            <h2 className="card-title">Timeline</h2>
-                            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/ledger')}>Ledger</button>
-                        </div>
-                        <TransactionTimeline transactions={advanceTransactions} />
-                    </div>
+                    {aiSnapshot && <AiRecommendationCollapsible snapshot={aiSnapshot} />}
                 </div>
             </div>
         </>

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import Icon from './Icon'
 import Logo from './Logo'
-import { mockUsers, mockApi } from '../data/mockApi'
+import { mockUsers } from '../data/mockApi'
 import { useAuth } from '../hooks'
 
 interface AppLayoutProps {
@@ -36,19 +36,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
         ?? mockUsers[0].email
 
     // Read synchronously from live in-memory state — always up to date
-    const pendingToken = mockApi.getPendingConfirmationToken()
-
     const isAdminPath = path.startsWith('/admin')
+
+    const isAdmin = authUser?.role === 'Admin'
 
     const allNavItems = [
         { path: '/dashboard', label: 'Home', icon: 'home' as const },
         { path: '/invoices', label: 'Invoices', icon: 'invoice' as const },
         { path: '/cash-flow', label: 'Cash Flow', icon: 'cashflow' as const },
         { path: '/ledger', label: 'Ledger', icon: 'ledger' as const },
-        { path: '/admin', label: 'Admin', icon: 'admin' as const },
-        ...(authUser?.accountType === 'SmallBusiness'
-            ? [{ path: '/client/confirm', label: 'Client Link', icon: 'link' as const }]
-            : []),
+        ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: 'admin' as const }] : []),
     ]
 
     const navItems = isAdminPath
@@ -56,11 +53,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
         : allNavItems.filter((item) => item.path !== '/admin')
 
     const pageTitle = pageTitleMap.find(([key]) => path.startsWith(key))?.[1] ?? 'Hassil'
-
-    const goClientLink = () => {
-        const token = mockApi.getPendingConfirmationToken()
-        navigate(token ? `/client/confirm/${token}` : '/advances/adv-002')
-    }
 
     return (
         <div className="app-layout light-shell">
@@ -100,18 +92,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         const isActive =
                             path === item.path ||
                             (item.path !== '/dashboard' && path.startsWith(item.path))
-                        const onClick = item.path === '/client/confirm'
-                            ? goClientLink
-                            : () => navigate(item.path)
                         return (
                             <button
                                 key={item.path}
                                 className={isActive ? 'active' : ''}
-                                onClick={onClick}
+                                onClick={() => navigate(item.path)}
                             >
                                 <Icon name={item.icon} />
                                 {item.label}
-                                {item.path === '/client/confirm' && pendingToken && <span>1</span>}
                             </button>
                         )
                     })}

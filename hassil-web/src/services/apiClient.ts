@@ -207,6 +207,12 @@ async function apiClient<T>(endpoint: string, { authRequired = true, method = 'G
         }
 
         // --- Public / Client Confirmation ---
+        if (endpoint.match(/^\/invoices\/[^/]+\/client-confirmation$/) && method === 'POST') {
+            const invoiceId = endpoint.split('/')[2]
+            const payload = JSON.parse(body)
+            const res = await mockApi.createClientConfirmation(invoiceId, payload.clientEmail)
+            return res.data as T
+        }
         if (endpoint.startsWith('/public/confirm/') && method === 'GET') {
             const token = endpoint.split('/')[3]
             const res = await mockApi.getClientConfirmation(token)

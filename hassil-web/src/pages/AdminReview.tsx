@@ -62,7 +62,7 @@ export default function AdminReview() {
         decide,
     } = useAdmin()
 
-    const [filter, setFilter] = useState('Needs action')
+    const [filter, setFilter] = useState('All')
     const [deciding, setDeciding] = useState(false)
 
     // Always pull fresh data on mount — picks up any advances submitted since
@@ -154,17 +154,25 @@ export default function AdminReview() {
                             )}
                         </DisclosurePanel>
                         <ReviewScore score={selected.reviewScore} flags={flags} />
-                        <div className="form-actions mt-16">
-                            <button className="btn btn-danger" disabled={deciding} onClick={() => doDecision(selected.id, 'Rejected')}>
-                                <Icon name="review" /> Reject
-                            </button>
-                            <button className="btn btn-secondary" disabled={deciding} onClick={() => doDecision(selected.id, 'RequestMoreInfo')}>
-                                <Icon name="invoice" /> Request More Info
-                            </button>
-                            <button className="btn btn-success" disabled={deciding} onClick={() => doDecision(selected.id, 'Approved')}>
-                                <Icon name="check" /> Approve
-                            </button>
-                        </div>
+                        {['PendingReview', 'PendingClientConfirmation'].includes(selected.status) && (
+                            <div className="form-actions mt-16">
+                                <button className="btn btn-danger" disabled={deciding} onClick={() => doDecision(selected.id, 'Rejected')}>
+                                    <Icon name="review" /> Reject
+                                </button>
+                                <button className="btn btn-secondary" disabled={deciding} onClick={() => doDecision(selected.id, 'RequestMoreInfo')}>
+                                    <Icon name="invoice" /> Request More Info
+                                </button>
+                                <button className="btn btn-success" disabled={deciding} onClick={() => doDecision(selected.id, 'Approved')}>
+                                    <Icon name="check" /> Approve
+                                </button>
+                            </div>
+                        )}
+                        {!['PendingReview', 'PendingClientConfirmation'].includes(selected.status) && (
+                            <div className="simulation-panel success mt-16">
+                                <Icon name="check" />
+                                <span>Decision recorded — {selected.status}</span>
+                            </div>
+                        )}
                     </div>
                     <div>
                         {ai && <AiReviewCard snapshot={ai} />}
@@ -186,8 +194,9 @@ export default function AdminReview() {
 
     const filterOptions: FilterOption[] = [
         { label: 'All' },
-        { label: 'Pending review',  status: 'PendingReview' },
+        { label: 'Needs action',    status: ['PendingReview', 'PendingClientConfirmation'] },
         { label: 'Awaiting client', status: 'PendingClientConfirmation' },
+        { label: 'Pending review',  status: 'PendingReview' },
         { label: 'Approved',        status: 'Approved' },
         { label: 'Funded',          status: 'Disbursed' },
         { label: 'Repaid',          status: 'Repaid' },

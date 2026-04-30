@@ -2316,9 +2316,16 @@ tbody tr.clickable:hover, tbody tr:hover {
 }
 
 .disclosure-panel {
-  margin-top: 14px;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
+  margin-top: 20px;
+  border-top: 1.5px solid var(--border-strong);
+  padding-top: 16px;
+}
+
+.card > .disclosure-panel:first-child,
+.disclosure-panel.no-divider {
+  margin-top: 20px;
+  border-top: none;
+  padding-top: 0;
 }
 
 .disclosure-panel summary {
@@ -2334,14 +2341,50 @@ tbody tr.clickable:hover, tbody tr:hover {
 }
 
 .disclosure-panel summary::after {
-  content: '+';
-  display: inline-flex;
-  margin-left: 7px;
-  font-weight: 900;
+  display: none;
 }
 
 .disclosure-panel[open] summary::after {
-  content: '-';
+  display: none;
+}
+
+.disclosure-panel .when-open { display: none; }
+.disclosure-panel[open] .when-closed { display: none; }
+.disclosure-panel[open] .when-open { display: inline; }
+
+/* Evidence collapsible panel */
+.evidence-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text);
+}
+
+.evidence-panel summary .icon {
+  width: 18px;
+  height: 18px;
+  color: var(--gray);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.evidence-panel[open] summary .icon {
+  transform: rotate(180deg);
+}
+
+/* AI recommendation toggle */
+.ai-toggle summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ai-toggle .ai-toggle-open { display: none; width: 100%; }
+.ai-toggle[open] .ai-toggle-closed { display: none; }
+.ai-toggle[open] .ai-toggle-open {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 .disclosure-content {
@@ -2634,7 +2677,7 @@ tbody tr.clickable:hover, tbody tr:hover {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 30px;
+  padding: 20px 24px;
   box-shadow: var(--shadow);
 }
 
