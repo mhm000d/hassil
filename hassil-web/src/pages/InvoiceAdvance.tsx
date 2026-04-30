@@ -27,7 +27,7 @@ export default function InvoiceAdvance() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { user: currentUser } = useAuth()
-    const { get: getInvoice, update: updateInvoice } = useInvoices()
+    const { get: getInvoice, update: updateInvoice, refetch: refetchInvoices } = useInvoices()
     const { create: createAdvance, getQuote } = useAdvances()
 
     const [invoice, setInvoice] = useState<Invoice | null>(null)
@@ -37,7 +37,10 @@ export default function InvoiceAdvance() {
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        if (id) {
+        if (!id) return
+        // Refetch invoices first so we always have the latest status,
+        // then load this specific invoice and its quote.
+        refetchInvoices().then(() =>
             getInvoice(id).then((res) => {
                 setInvoice(res ?? null)
                 if (res) {
@@ -48,8 +51,8 @@ export default function InvoiceAdvance() {
                     setError('Invoice not found')
                 }
             }).catch(err => setError(err.message || 'Failed to load invoice'))
-        }
-    }, [id, getInvoice, getQuote])
+        )
+    }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
     if (error || !invoice || !quote) {
         return (

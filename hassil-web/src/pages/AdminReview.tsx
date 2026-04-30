@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { AdminDecision, AiReviewSnapshot } from '../types'
+import type { AdminDecision, AiReviewSnapshot, User } from '../types'
 import {
-    mockUsers,
     formatCurrency,
     getModelLabel,
     getReviewFlags,
@@ -17,6 +16,16 @@ import ReviewScore from '../components/ReviewScore'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Table from '../components/Table'
 import Icon from '../components/Icon'
+
+function userLabel(user: User): string {
+    return (
+        user.displayName ??
+        user.smallBusinessProfile?.businessName ??
+        user.freelancerProfile?.fullName ??
+        user.name ??
+        user.email
+    )
+}
 
 function AiReviewCard({ snapshot }: { snapshot: AiReviewSnapshot }) {
     const statusMap = { Low: 'Approved', Medium: 'PendingReview', High: 'Rejected' } as const
@@ -43,48 +52,51 @@ export default function AdminReview() {
     const { advanceId } = useParams<{ advanceId?: string }>()
     const navigate = useNavigate()
     const { user: authUser } = useAuth()
-    const { 
-        advances, 
-        invoices, 
-        aiSnapshots, 
-        loading, 
-        refetch, 
-        updateAdvance, 
-        updateInvoice, 
-        addReview 
+    const {
+        advances,
+        invoices,
+        aiSnapshots,
+        users,
+        loading,
+        refetch,
+        decide,
     } = useAdmin()
-    
-    const [filter, setFilter] = useState('Needs action')
 
-    useEffect(() => { refetch() }, [refetch])
+    const [filter, setFilter] = useState('Needs action')
+    const [deciding, setDeciding] = useState(false)
+
+    // Always pull fresh data on mount — picks up any advances submitted since
+    // the admin context was last populated (fixes the user/admin disconnection).
+    useEffect(() => {
+        refetch()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Resolve a userId to a User object using the context users list (which
+    // includes both seed users and localStorage-registered users).
+    const resolveUser = (userId: string): User | undefined =>
+        users.find((u) => u.id === userId)
 
     const doDecision = async (id: string, decision: AdminDecision) => {
-        const adv = advances.find((a) => a.id === id)
-        if (!adv || !authUser) return
-        const now = new Date().toISOString()
-        const newStatus = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'PendingReview'
-        
-        await updateAdvance(id, { status: newStatus, updatedAt: now })
-        await updateInvoice(adv.invoiceId, { status: newStatus === 'Approved' ? 'Approved' : newStatus === 'Rejected' ? 'Rejected' : 'PendingReview' })
-        await addReview({
-            advanceRequestId: id,
-            reviewerUserId: authUser.id,
-            decision,
-            notes: decision === 'RequestMoreInfo' ? 'Additional evidence requested.' : 'Manual review completed.',
-        })
-        navigate('/admin')
+        if (!authUser || deciding) return
+        setDeciding(true)
+        try {
+            await decide(id, decision, authUser.id)
+            navigate('/admin')
+        } finally {
+            setDeciding(false)
+        }
     }
 
     if (loading) {
         return <div className="loading-state">Loading review data...</div>
     }
 
-    // Detail view
+    // ── Detail view ──────────────────────────────────────────────────────────
     if (advanceId) {
         const selected = advances.find((a) => a.id === advanceId)
         const invoice = selected ? invoices.find((inv) => inv.id === selected.invoiceId) : null
         const ai = selected ? aiSnapshots.find((s) => s.advanceRequestId === selected.id) : null
-        const user = selected ? mockUsers.find((u) => u.id === selected.userId) : null
+        const user = selected ? resolveUser(selected.userId) : null
 
         if (!selected || !invoice || !user) {
             return (
@@ -109,6 +121,7 @@ export default function AdminReview() {
                         </div>
                         <DetailGrid
                             items={[
+                                ['User', userLabel(user)],
                                 ['User type', user.accountType === 'SmallBusiness' ? 'Small Business' : 'Freelancer'],
                                 ['Financing model', getModelLabel(selected.financingModel)],
                                 ['Trust score', `${user.trustScore}/100`],
@@ -142,13 +155,13 @@ export default function AdminReview() {
                         </DisclosurePanel>
                         <ReviewScore score={selected.reviewScore} flags={flags} />
                         <div className="form-actions mt-16">
-                            <button className="btn btn-danger" onClick={() => doDecision(selected.id, 'Rejected')}>
+                            <button className="btn btn-danger" disabled={deciding} onClick={() => doDecision(selected.id, 'Rejected')}>
                                 <Icon name="review" /> Reject
                             </button>
-                            <button className="btn btn-secondary" onClick={() => doDecision(selected.id, 'RequestMoreInfo')}>
+                            <button className="btn btn-secondary" disabled={deciding} onClick={() => doDecision(selected.id, 'RequestMoreInfo')}>
                                 <Icon name="invoice" /> Request More Info
                             </button>
-                            <button className="btn btn-success" onClick={() => doDecision(selected.id, 'Approved')}>
+                            <button className="btn btn-success" disabled={deciding} onClick={() => doDecision(selected.id, 'Approved')}>
                                 <Icon name="check" /> Approve
                             </button>
                         </div>
@@ -165,40 +178,62 @@ export default function AdminReview() {
         )
     }
 
-    // List view
-    const filterOptions = ['Needs action', 'Pending review', 'Awaiting client', 'Rejected', 'Low score', 'Factoring', 'Discounting']
+    // ── List view ────────────────────────────────────────────────────────────
+    type FilterOption = {
+        label: string
+        status?: string | string[]
+    }
+
+    const filterOptions: FilterOption[] = [
+        { label: 'All' },
+        { label: 'Pending review',  status: 'PendingReview' },
+        { label: 'Awaiting client', status: 'PendingClientConfirmation' },
+        { label: 'Approved',        status: 'Approved' },
+        { label: 'Funded',          status: 'Disbursed' },
+        { label: 'Repaid',          status: 'Repaid' },
+        { label: 'Rejected',        status: 'Rejected' },
+    ]
+
     const queue = advances.filter((adv) => {
-        if (filter === 'Needs action') return ['PendingReview', 'PendingClientConfirmation'].includes(adv.status) || adv.reviewScore < 75
-        if (filter === 'Pending review') return adv.status === 'PendingReview'
-        if (filter === 'Awaiting client') return adv.status === 'PendingClientConfirmation'
-        if (filter === 'Rejected') return adv.status === 'Rejected'
-        if (filter === 'Low score') return adv.reviewScore < 75
-        if (filter === 'Factoring') return adv.financingModel === 'InvoiceFactoring'
-        if (filter === 'Discounting') return adv.financingModel === 'InvoiceDiscounting'
-        return true
+        if (filter === 'All') return true
+        const opt = filterOptions.find((o) => o.label === filter)
+        if (!opt?.status) return true
+        return Array.isArray(opt.status)
+            ? opt.status.includes(adv.status)
+            : adv.status === opt.status
     })
 
     return (
         <>
-            <PageHeading title="Admin review" description="Review pending and flagged requests." />
+            <PageHeading
+                title="Admin review"
+                description={`${advances.length} total advance${advances.length !== 1 ? 's' : ''}`}
+            />
             <div className="card">
                 <div className="segmented-control mb-18" role="tablist">
-                    {filterOptions.map((opt) => (
-                        <button key={opt} className={filter === opt ? 'active' : ''} onClick={() => setFilter(opt)} type="button">
-                            {opt}
+                    {filterOptions.map(({ label }) => (
+                        <button
+                            key={label}
+                            className={filter === label ? 'active' : ''}
+                            onClick={() => setFilter(label)}
+                            type="button"
+                        >
+                            {label}
                         </button>
                     ))}
                 </div>
                 <Table
                     headers={['User', 'Model', 'Invoice', 'Amount', 'Score', 'Status', 'Action']}
-                    emptyTitle="No reviews waiting"
-                    emptyDescription="Flagged or pending requests will appear here."
+                    emptyTitle="No advances found"
+                    emptyDescription="Advances matching this filter will appear here."
                     rows={queue.map((adv) => {
                         const inv = invoices.find((i) => i.id === adv.invoiceId)
-                        const usr = mockUsers.find((u) => u.id === adv.userId)
-                        if (!inv || !usr) return []
+                        const usr = resolveUser(adv.userId)
+                        // Skip rows where we can't resolve the invoice — user is shown as fallback
+                        if (!inv) return []
+                        const label = usr ? userLabel(usr) : adv.userId
                         return [
-                            usr.smallBusinessProfile?.businessName ?? usr.freelancerProfile?.fullName ?? usr.email,
+                            label,
                             <ModelBadge key="model" model={adv.financingModel} />,
                             inv.invoiceNumber,
                             formatCurrency(inv.amount, inv.currency),

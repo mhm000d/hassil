@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
-import type { TrustScoreEvent, User } from '../types'
+import { useEffect } from 'react'
+import type { User } from '../types'
 import { useAuth, useTransactions } from '../hooks'
-import { mockApi, mockUsers, formatDateTime, getTrustScoreColor } from '../data/mockApi'
+import { mockUsers, formatDateTime, getTrustScoreColor } from '../data/mockApi'
 import PageHeading from '../components/PageHeading'
 import TransactionTimeline from '../components/TransactionTimeline'
 
@@ -30,13 +30,14 @@ function TrustBreakdown({ user }: { user: User }) {
 
 export default function Ledger() {
     const { user: authUser } = useAuth()
-    const { transactions } = useTransactions()
-    const [trustEvents, setTrustEvents] = useState<TrustScoreEvent[]>([])
+    const { transactions, trustScoreEvents, refetch } = useTransactions()
     const user = authUser || mockUsers[0]
 
+    // Refresh on mount so the ledger always reflects the latest transactions
+    // and trust score events (e.g. after a simulation on the advance page).
     useEffect(() => {
-        mockApi.listTrustScoreEvents(user.id).then((res) => setTrustEvents(res.data))
-    }, [user.id])
+        refetch()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <>
@@ -53,8 +54,8 @@ export default function Ledger() {
                     <h2 className="card-title">Trust score events</h2>
                     <TrustBreakdown user={user} />
                     <div className="timeline mt-16">
-                        {trustEvents.length === 0 && <p className="soft-text">No trust score events yet.</p>}
-                        {trustEvents.map((event) => (
+                        {trustScoreEvents.length === 0 && <p className="soft-text">No trust score events yet.</p>}
+                        {trustScoreEvents.map((event) => (
                             <div className="timeline-item" key={event.id}>
                                 <span
                                     className="timeline-dot"

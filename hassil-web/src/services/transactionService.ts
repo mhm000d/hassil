@@ -1,5 +1,5 @@
 import { api } from './apiClient'
-import type { Transaction } from '../types'
+import type { Transaction, TrustScoreEvent } from '../types'
 
 export const TransactionService = {
     list: async () => {
@@ -7,5 +7,8 @@ export const TransactionService = {
     },
     create: async (tx: Omit<Transaction, 'id' | 'createdAt'>) => {
         return await api.post<Transaction>('/transactions', tx)
-    }
+    },
+    listTrustScoreEvents: async () => {
+        return await api.get<TrustScoreEvent[]>('/trust-score-events')
+    },
 }

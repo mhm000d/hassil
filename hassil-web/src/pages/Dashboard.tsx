@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { User } from '../types'
 import { mockUsers, formatCurrency, calculateQuote } from '../data/mockApi'
@@ -13,11 +14,18 @@ const seedUser: User = mockUsers[0]
 export default function Dashboard() {
     const navigate = useNavigate()
     const { user: authUser } = useAuth()
-    
-    const { invoices } = useInvoices()
-    const { advances } = useAdvances()
-    const { transactions } = useTransactions()
 
+    const { invoices, refetch: refetchInvoices } = useInvoices()
+    const { advances, refetch: refetchAdvances } = useAdvances()
+    const { transactions, refetch: refetchTransactions } = useTransactions()
+
+    // Refresh all data when the dashboard mounts so it always reflects
+    // the latest state (e.g. after an admin decision on another tab).
+    useEffect(() => {
+        refetchInvoices()
+        refetchAdvances()
+        refetchTransactions()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     const model = (authUser?.accountType ?? seedUser.accountType) === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'
     const displayName = authUser?.displayName

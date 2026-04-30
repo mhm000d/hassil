@@ -60,6 +60,12 @@ async function apiClient<T>(endpoint: string, { authRequired = true, method = 'G
             return res.data as T
         }
 
+        // --- Users ---
+        if (endpoint === '/users' && method === 'GET') {
+            const res = await mockApi.listUsers()
+            return res.data as T
+        }
+
         // --- Invoices ---
         if (endpoint === '/invoices' && method === 'GET') {
             const res = await mockApi.listInvoices(userId)
@@ -154,6 +160,10 @@ async function apiClient<T>(endpoint: string, { authRequired = true, method = 'G
             const res = await mockApi.listTransactions(userId)
             return res.data as T
         }
+        if (endpoint === '/trust-score-events' && method === 'GET') {
+            const res = await mockApi.listTrustScoreEvents(userId)
+            return res.data as T
+        }
 
         // --- Admin Global Fetching ---
         if (endpoint === '/admin/invoices' && method === 'GET') {
@@ -178,6 +188,12 @@ async function apiClient<T>(endpoint: string, { authRequired = true, method = 'G
         if (endpoint === '/admin-reviews' && method === 'POST') {
             const payload = JSON.parse(body)
             const res = await mockApi.addAdminReview({ ...payload, id: generateId('rev'), createdAt: new Date().toISOString() })
+            return res.data as T
+        }
+        if (endpoint.match(/^\/admin\/advances\/[^/]+\/decide$/) && method === 'POST') {
+            const id = endpoint.split('/')[3]
+            const payload = JSON.parse(body)
+            const res = await mockApi.adminDecide(id, payload.decision, payload.reviewerUserId, payload.notes)
             return res.data as T
         }
         if (endpoint.endsWith('/ai-review') && method === 'POST') {

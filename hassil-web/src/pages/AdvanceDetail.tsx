@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { AdvanceRequest, AiReviewSnapshot, Invoice } from '../types'
+import type { AiReviewSnapshot } from '../types'
 import {
     formatCurrency,
     formatDate,
@@ -56,56 +56,59 @@ export default function AdvanceDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { user: authUser } = useAuth()
-    const { get: getInvoice } = useInvoices()
-    const {
-        get: getAdvance,
-        simulateDisbursement,
-        simulateClientPaymentDetected,
-        simulateUserRepayment,
-        simulateClientPaidHassil,
-        simulateBufferRelease
-    } = useAdvances()
-    const { transactions: allTransactions } = useTransactions()
+
+    // Pull live data from context — updates automatically after simulations
+    const { advances, refetch: refetchAdvances,
+            simulateDisbursement, simulateClientPaymentDetected,
+            simulateUserRepayment, simulateClientPaidHassil,
+            simulateBufferRelease } = useAdvances()
+    const { invoices, refetch: refetchInvoices } = useInvoices()
+    const { transactions, refetch: refetchTransactions } = useTransactions()
     const { getAiSnapshot } = useAdmin()
 
-    const [advance, setAdvance] = useState<AdvanceRequest | null>(null)
-    const [invoice, setInvoice] = useState<Invoice | null>(null)
     const [aiSnapshot, setAiSnapshot] = useState<AiReviewSnapshot | null>(null)
+    const [simulating, setSimulating] = useState(false)
 
-    const load = async () => {
-        if (!id) return
-        const advData = await getAdvance(id)
-        if (!advData) return
-        setAdvance(advData)
+    // Derive advance and invoice directly from context arrays — no local copies needed
+    const advance = advances.find((a) => a.id === id) ?? null
+    const invoice = advance ? invoices.find((inv) => inv.id === advance.invoiceId) ?? null : null
+    const advanceTransactions = transactions.filter((tx) => tx.advanceRequestId === id)
 
-        const [invData, aiData] = await Promise.all([
-            getInvoice(advData.invoiceId),
-            getAiSnapshot(id)
-        ])
+    // Refresh all context data on mount so this page always shows fresh state
+    useEffect(() => {
+        refetchAdvances()
+        refetchInvoices()
+        refetchTransactions()
+    }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-        if (invData) setInvoice(invData)
-        if (aiData) setAiSnapshot(aiData)
-    }
-
-    useEffect(() => { load() }, [id])
-
-    const transactions = allTransactions.filter((tx) => tx.advanceRequestId === id)
+    // Load AI snapshot separately (fetched on demand, not stored in context)
+    useEffect(() => {
+        if (id) {
+            getAiSnapshot(id).then((snap) => setAiSnapshot(snap ?? null))
+        }
+    }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const simulate = async () => {
-        if (!advance || !invoice || !authUser) return
-
-        if (advance.status === 'Approved') {
-            await simulateDisbursement(advance.id)
-        } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'Disbursed') {
-            await simulateClientPaidHassil(advance.id)
-        } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'ClientPaidHassil') {
-            await simulateBufferRelease(advance.id)
-        } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'Disbursed') {
-            await simulateClientPaymentDetected(advance.id)
-        } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'ClientPaymentDetected') {
-            await simulateUserRepayment(advance.id)
+        if (!advance || !invoice || !authUser || simulating) return
+        setSimulating(true)
+        try {
+            if (advance.status === 'Approved') {
+                await simulateDisbursement(advance.id)
+            } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'Disbursed') {
+                await simulateClientPaidHassil(advance.id)
+            } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'ClientPaidHassil') {
+                await simulateBufferRelease(advance.id)
+            } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'Disbursed') {
+                await simulateClientPaymentDetected(advance.id)
+            } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'ClientPaymentDetected') {
+                await simulateUserRepayment(advance.id)
+            }
+            // Each simulate* call already refetches advances in AdvanceContext.
+            // Refresh transactions so the timeline updates too.
+            await refetchTransactions()
+        } finally {
+            setSimulating(false)
         }
-        await load()
     }
 
     if (!advance || !invoice) {
@@ -180,8 +183,8 @@ export default function AdvanceDetail() {
                                 <span>Lifecycle Simulator</span>
                             </div>
                             <p className="simulation-text">Trigger the next phase of the financing lifecycle to test state transitions and ledger entries.</p>
-                            <button className="btn btn-sim full-width" onClick={simulate}>
-                                <Icon name="next" /> {nextLabel}
+                            <button className="btn btn-sim full-width" onClick={simulate} disabled={simulating}>
+                                <Icon name="next" /> {simulating ? 'Processing...' : nextLabel}
                             </button>
                         </div>
                     ) : (
@@ -202,7 +205,7 @@ export default function AdvanceDetail() {
                             <h2 className="card-title">Timeline</h2>
                             <button className="btn btn-secondary btn-sm" onClick={() => navigate('/ledger')}>Ledger</button>
                         </div>
-                        <TransactionTimeline transactions={transactions} />
+                        <TransactionTimeline transactions={advanceTransactions} />
                     </div>
                 </div>
             </div>

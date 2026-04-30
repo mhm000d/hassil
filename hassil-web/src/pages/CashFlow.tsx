@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Invoice, User } from '../types'
-import { mockApi, mockUsers, formatCurrency, formatDate, daysUntilDate, calculateQuote } from '../data/mockApi'
+import type { Invoice } from '../types'
+import { formatCurrency, formatDate, daysUntilDate, calculateQuote } from '../data/mockApi'
+import { useAuth, useInvoices } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import EmptyPanel from '../components/EmptyPanel'
 import Icon from '../components/Icon'
-
-const currentUser: User = mockUsers[0]
 
 function StatCard({ tone, label, value, sub }: { tone: 'gold' | 'green' | 'amber' | 'blue'; label: string; value: string; sub?: string }) {
     const toneLabel = { gold: '01', green: '02', amber: '03', blue: '04' }[tone]
@@ -44,17 +43,22 @@ function CashFlowChart({ weeks }: { weeks: { label: string; total: number }[] })
 
 export default function CashFlow() {
     const navigate = useNavigate()
-    const [invoices, setInvoices] = useState<Invoice[]>([])
+    const { user } = useAuth()
+    const { invoices: allInvoices, refetch } = useInvoices()
 
+    // Refresh on mount so the forecast always reflects the latest invoice statuses
     useEffect(() => {
-        mockApi.listInvoices(currentUser.id).then((res) => {
-            setInvoices(res.data.filter((inv) => inv.status !== 'Paid' && inv.status !== 'Rejected'))
-        })
-    }, [])
+        refetch()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+    const invoices = allInvoices.filter((inv) => inv.status !== 'Paid' && inv.status !== 'Rejected')
+
+    // Use a fallback user shape for quote calculations if user is null
+    const quoteUser = user ?? { id: '', accountType: 'SmallBusiness', trustScore: 40 } as any
 
     const total = invoices.reduce((sum, inv) => sum + inv.amount, 0)
-    const potentialAdvance = invoices.reduce((sum, inv) => sum + calculateQuote(currentUser, inv).advanceAmount, 0)
-    const estimatedFees = invoices.reduce((sum, inv) => sum + calculateQuote(currentUser, inv).feeAmount, 0)
+    const potentialAdvance = invoices.reduce((sum, inv) => sum + calculateQuote(quoteUser, inv).advanceAmount, 0)
+    const estimatedFees = invoices.reduce((sum, inv) => sum + calculateQuote(quoteUser, inv).feeAmount, 0)
     const next30 = invoices.filter((inv) => daysUntilDate(inv.dueDate) <= 30).reduce((sum, inv) => sum + inv.amount, 0)
 
     const cashByWeek = invoices.reduce<{ label: string; total: number }[]>((weeks, invoice) => {
@@ -78,8 +82,8 @@ export default function CashFlow() {
                 <StatCard
                     tone="blue"
                     label="Current model"
-                    value={currentUser.accountType === 'Freelancer' ? 'Discounting' : 'Factoring'}
-                    sub={currentUser.accountType === 'Freelancer' ? 'Private client relationship' : 'Client confirmation required'}
+                    value={quoteUser.accountType === 'Freelancer' ? 'Discounting' : 'Factoring'}
+                    sub={quoteUser.accountType === 'Freelancer' ? 'Private client relationship' : 'Client confirmation required'}
                 />
             </section>
             <div className="cash-summary-grid mb-18">
@@ -109,8 +113,8 @@ export default function CashFlow() {
                     <>
                         <CashFlowChart weeks={cashByWeek} />
                         <div className="forecast-list mt-18">
-                            {invoices.map((invoice) => {
-                                const quote = calculateQuote(currentUser, invoice)
+                            {invoices.map((invoice: Invoice) => {
+                                const quote = calculateQuote(quoteUser, invoice)
                                 const width = Math.min(100, Math.round((invoice.amount / Math.max(total, 1)) * 100))
                                 return (
                                     <div className="forecast-row" key={invoice.id}>

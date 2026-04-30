@@ -1632,6 +1632,26 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--teal);
 }
 
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 5px;
+  background: var(--teal);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.segmented-control button:not(.active) .tab-badge {
+  background: var(--gray);
+}
+
 /* Stats and grids */
 .stat-grid {
   display: grid;

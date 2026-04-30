@@ -605,10 +605,32 @@ function ok<T>(data: T): ApiResponse<T> {
 export const mockApi = {
     // Users
     getUser(id: string): Promise<ApiResponse<User | undefined>> {
-        return Promise.resolve(ok(mockUsers.find((u) => u.id === id)))
+        return Promise.resolve(ok(authApi.me(id)))
     },
     listUsers(): Promise<ApiResponse<User[]>> {
-        return Promise.resolve(ok(mockUsers))
+        // Merge seed users with localStorage-registered users so admin sees
+        // everyone who has ever submitted an advance, not just seed data.
+        const seenIds = new Set<string>()
+        const result: User[] = []
+        for (const u of mockUsers) {
+            seenIds.add(u.id)
+            result.push(u)
+        }
+        // Pull registered users from localStorage and resolve via authApi.me
+        try {
+            const raw = localStorage.getItem('hassil_registered_users')
+            const registered: { id: string }[] = raw ? JSON.parse(raw) : []
+            for (const r of registered) {
+                if (!seenIds.has(r.id)) {
+                    const resolved = authApi.me(r.id)
+                    if (resolved) {
+                        seenIds.add(resolved.id)
+                        result.push(resolved)
+                    }
+                }
+            }
+        } catch { /* ignore */ }
+        return Promise.resolve(ok(result))
     },
 
     // Invoices
@@ -781,6 +803,38 @@ export const mockApi = {
     addAiSnapshot(snapshot: AiReviewSnapshot): Promise<ApiResponse<AiReviewSnapshot>> {
         _aiSnapshots = [snapshot, ..._aiSnapshots]
         return Promise.resolve(ok(snapshot))
+    },
+
+    // Admin decision — atomically updates advance + invoice status and records the review
+    async adminDecide(advanceId: string, decision: 'Approved' | 'Rejected' | 'RequestMoreInfo', reviewerUserId: string, notes?: string): Promise<ApiResponse<{ advance: AdvanceRequest; invoice: Invoice; review: AdminReview }>> {
+        const adv = _advances.find(a => a.id === advanceId)
+        if (!adv) throw new Error(`Advance ${advanceId} not found`)
+        const inv = _invoices.find(i => i.id === adv.invoiceId)
+        if (!inv) throw new Error(`Invoice ${adv.invoiceId} not found`)
+
+        const now = new Date().toISOString()
+        const newAdvanceStatus: AdvanceRequest['status'] = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'PendingReview'
+        const newInvoiceStatus: Invoice['status'] = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'PendingReview'
+
+        _advances = _advances.map(a => a.id === advanceId ? { ...a, status: newAdvanceStatus, updatedAt: now } : a)
+        _invoices = _invoices.map(i => i.id === adv.invoiceId ? { ...i, status: newInvoiceStatus } : i)
+
+        const review: AdminReview = {
+            id: generateId('rev'),
+            advanceRequestId: advanceId,
+            reviewerUserId,
+            decision,
+            notes: notes ?? (decision === 'RequestMoreInfo' ? 'Additional evidence requested.' : 'Manual review completed.'),
+            createdAt: now,
+        }
+        _adminReviews = [review, ..._adminReviews]
+        saveState()
+
+        return Promise.resolve(ok({
+            advance: _advances.find(a => a.id === advanceId)!,
+            invoice: _invoices.find(i => i.id === adv.invoiceId)!,
+            review,
+        }))
     },
 
     // Admin reviews

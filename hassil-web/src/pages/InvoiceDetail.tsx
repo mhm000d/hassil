@@ -39,7 +39,7 @@ export default function InvoiceDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { user: currentUser } = useAuth()
-    const { get: getInvoice, addDocument: addInvoiceDocument } = useInvoices()
+    const { get: getInvoice, addDocument: addInvoiceDocument, refetch: refetchInvoices } = useInvoices()
     const [invoice, setInvoice] = useState<Invoice | null>(null)
     const user = currentUser || mockUsers[0]
 
@@ -50,7 +50,11 @@ export default function InvoiceDetail() {
         }
     }
 
-    useEffect(() => { load() }, [id, getInvoice])
+    // Refetch from the shared data store on mount so any admin decision
+    // (approve / reject) is immediately reflected.
+    useEffect(() => {
+        refetchInvoices().then(() => load())
+    }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const addDocument = async () => {
         if (!invoice) return
