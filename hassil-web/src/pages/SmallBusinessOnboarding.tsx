@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { authApi } from '../data/mockApi'
-import './FreelancerOnboarding.css'
+import { useAuth } from '../hooks'
+import '../styles/FreelancerOnboarding.css'
 
 export default function SmallBusinessOnboarding() {
     const navigate = useNavigate()
-    const { login } = useAuth()
+    const { completeProfile } = useAuth()
 
     const pending = (() => {
         try { return JSON.parse(sessionStorage.getItem('hassil_pending_reg') ?? '{}') } catch { return {} }
@@ -26,14 +25,16 @@ export default function SmallBusinessOnboarding() {
         setForm({ ...form, [e.target.name]: e.target.value })
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         // Display name = contact person from registration, not the business name
         const email = form.email || pending.email
         const companyName = form.businessName || pending.name || 'Business'
-        // Persist company name as displayName so login retrieves it
-        if (email) authApi.updateDisplayName(email, companyName)
-        login({ name: pending.name || 'Contact Person', displayName: companyName, email, accountType: 'SmallBusiness' })
+        
+        if (email) {
+            await completeProfile({ email, displayName: companyName })
+        }
+        
         sessionStorage.removeItem('hassil_pending_reg')
         navigate('/dashboard')
     }

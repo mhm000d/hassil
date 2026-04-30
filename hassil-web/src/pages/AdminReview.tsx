@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { AdminDecision, AdvanceRequest, AiReviewSnapshot, Invoice, User } from '../types'
+import type { AdminDecision, AiReviewSnapshot, User } from '../types'
 import {
-    mockApi,
-    mockUsers,
-    generateId,
     formatCurrency,
     getModelLabel,
     getReviewFlags,
 } from '../data/mockApi'
+import { useAuth, useAdmin } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
 import ModelBadge from '../components/ModelBadge'
@@ -19,7 +17,15 @@ import Breadcrumbs from '../components/Breadcrumbs'
 import Table from '../components/Table'
 import Icon from '../components/Icon'
 
-const currentUser: User = mockUsers[2] // admin user
+function userLabel(user: User): string {
+    return (
+        user.displayName ??
+        user.smallBusinessProfile?.businessName ??
+        user.freelancerProfile?.fullName ??
+        user.name ??
+        user.email
+    )
+}
 
 function AiReviewCard({ snapshot }: { snapshot: AiReviewSnapshot }) {
     const statusMap = { Low: 'Approved', Medium: 'PendingReview', High: 'Rejected' } as const
@@ -45,49 +51,52 @@ function AiReviewCard({ snapshot }: { snapshot: AiReviewSnapshot }) {
 export default function AdminReview() {
     const { advanceId } = useParams<{ advanceId?: string }>()
     const navigate = useNavigate()
-    const [advances, setAdvances] = useState<AdvanceRequest[]>([])
-    const [invoices, setInvoices] = useState<Invoice[]>([])
-    const [aiSnapshots, setAiSnapshots] = useState<AiReviewSnapshot[]>([])
-    const [filter, setFilter] = useState('Needs action')
+    const { user: authUser } = useAuth()
+    const {
+        advances,
+        invoices,
+        aiSnapshots,
+        users,
+        loading,
+        silentRefetch,
+        decide,
+    } = useAdmin()
 
-    const load = async () => {
-        const [advRes, invRes, aiRes] = await Promise.all([
-            mockApi.listAdvanceRequests(),
-            mockApi.listInvoices(),
-            mockApi.listAiSnapshots(),
-        ])
-        setAdvances(advRes.data)
-        setInvoices(invRes.data)
-        setAiSnapshots(aiRes.data)
-    }
+    const [filter, setFilter] = useState('All')
+    const [deciding, setDeciding] = useState(false)
 
-    useEffect(() => { load() }, [])
+    // Silently refresh on mount to pick up any advances created since the
+    // admin context was last populated, without showing the loading spinner.
+    useEffect(() => {
+        silentRefetch()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Resolve a userId to a User object using the context users list (which
+    // includes both seed users and localStorage-registered users).
+    const resolveUser = (userId: string): User | undefined =>
+        users.find((u) => u.id === userId)
 
     const doDecision = async (id: string, decision: AdminDecision) => {
-        const adv = advances.find((a) => a.id === id)
-        if (!adv) return
-        const now = new Date().toISOString()
-        const newStatus = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'PendingReview'
-        await mockApi.updateAdvanceRequest(id, { status: newStatus, updatedAt: now })
-        await mockApi.updateInvoice(adv.invoiceId, { status: newStatus === 'Approved' ? 'Approved' : newStatus === 'Rejected' ? 'Rejected' : 'PendingReview' })
-        await mockApi.addAdminReview({
-            id: generateId('review'),
-            advanceRequestId: id,
-            reviewerUserId: currentUser.id,
-            decision,
-            notes: decision === 'RequestMoreInfo' ? 'Additional evidence requested.' : 'Manual review completed.',
-            createdAt: now,
-        })
-        await load()
-        navigate('/admin')
+        if (!authUser || deciding) return
+        setDeciding(true)
+        try {
+            await decide(id, decision, authUser.id)
+            navigate('/admin')
+        } finally {
+            setDeciding(false)
+        }
     }
 
-    // Detail view
+    if (loading) {
+        return <div className="loading-state">Loading review data...</div>
+    }
+
+    // ── Detail view ──────────────────────────────────────────────────────────
     if (advanceId) {
         const selected = advances.find((a) => a.id === advanceId)
         const invoice = selected ? invoices.find((inv) => inv.id === selected.invoiceId) : null
         const ai = selected ? aiSnapshots.find((s) => s.advanceRequestId === selected.id) : null
-        const user = selected ? mockUsers.find((u) => u.id === selected.userId) : null
+        const user = selected ? resolveUser(selected.userId) : null
 
         if (!selected || !invoice || !user) {
             return (
@@ -112,6 +121,7 @@ export default function AdminReview() {
                         </div>
                         <DetailGrid
                             items={[
+                                ['User', userLabel(user)],
                                 ['User type', user.accountType === 'SmallBusiness' ? 'Small Business' : 'Freelancer'],
                                 ['Financing model', getModelLabel(selected.financingModel)],
                                 ['Trust score', `${user.trustScore}/100`],
@@ -126,22 +136,43 @@ export default function AdminReview() {
                                     ['Repayment party', selected.repaymentParty],
                                     ['Client notification', selected.clientNotificationRequired ? 'Required' : 'Not required'],
                                     ['Client confirmation', invoice.clientConfirmation?.status ?? 'Not required'],
-                                    ['Supporting documents', `${invoice.documents.length}`],
+                                    ['Supporting documents', `${invoice.documents?.length ?? 0}`],
                                 ]}
                             />
+                            {invoice.documents && invoice.documents.length > 0 && (
+                                <div className="mt-16">
+                                    <h4 className="small-label">Evidence Files</h4>
+                                    <div className="file-list mt-8">
+                                        {invoice.documents.map(doc => (
+                                            <div key={doc.id} className="file-pill">
+                                                <Icon name="document" />
+                                                <span>{doc.fileName}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </DisclosurePanel>
                         <ReviewScore score={selected.reviewScore} flags={flags} />
-                        <div className="form-actions mt-16">
-                            <button className="btn btn-danger" onClick={() => doDecision(selected.id, 'Rejected')}>
-                                <Icon name="review" /> Reject
-                            </button>
-                            <button className="btn btn-secondary" onClick={() => doDecision(selected.id, 'RequestMoreInfo')}>
-                                <Icon name="invoice" /> Request More Info
-                            </button>
-                            <button className="btn btn-success" onClick={() => doDecision(selected.id, 'Approved')}>
-                                <Icon name="check" /> Approve
-                            </button>
-                        </div>
+                        {['PendingReview', 'PendingClientConfirmation'].includes(selected.status) && (
+                            <div className="form-actions mt-16">
+                                <button className="btn btn-danger" disabled={deciding} onClick={() => doDecision(selected.id, 'Rejected')}>
+                                    <Icon name="review" /> Reject
+                                </button>
+                                <button className="btn btn-secondary" disabled={deciding} onClick={() => doDecision(selected.id, 'RequestMoreInfo')}>
+                                    <Icon name="invoice" /> Request More Info
+                                </button>
+                                <button className="btn btn-success" disabled={deciding} onClick={() => doDecision(selected.id, 'Approved')}>
+                                    <Icon name="check" /> Approve
+                                </button>
+                            </div>
+                        )}
+                        {!['PendingReview', 'PendingClientConfirmation'].includes(selected.status) && (
+                            <div className="simulation-panel success mt-16">
+                                <Icon name="check" />
+                                <span>Decision recorded — {selected.status}</span>
+                            </div>
+                        )}
                     </div>
                     <div>
                         {ai && <AiReviewCard snapshot={ai} />}
@@ -155,40 +186,62 @@ export default function AdminReview() {
         )
     }
 
-    // List view
-    const filterOptions = ['Needs action', 'Pending review', 'Awaiting client', 'Rejected', 'Low score', 'Factoring', 'Discounting']
+    // ── List view ────────────────────────────────────────────────────────────
+    type FilterOption = {
+        label: string
+        status?: string | string[]
+    }
+
+    const filterOptions: FilterOption[] = [
+        { label: 'All' },
+        { label: 'Needs action',    status: ['PendingReview', 'PendingClientConfirmation'] },
+        { label: 'Awaiting client', status: 'PendingClientConfirmation' },
+        { label: 'Pending review',  status: 'PendingReview' },
+        { label: 'Approved',        status: 'Approved' },
+        { label: 'Funded',          status: 'Disbursed' },
+        { label: 'Repaid',          status: 'Repaid' },
+        { label: 'Rejected',        status: 'Rejected' },
+    ]
+
     const queue = advances.filter((adv) => {
-        if (filter === 'Needs action') return ['PendingReview', 'PendingClientConfirmation'].includes(adv.status) || adv.reviewScore < 75
-        if (filter === 'Pending review') return adv.status === 'PendingReview'
-        if (filter === 'Awaiting client') return adv.status === 'PendingClientConfirmation'
-        if (filter === 'Rejected') return adv.status === 'Rejected'
-        if (filter === 'Low score') return adv.reviewScore < 75
-        if (filter === 'Factoring') return adv.financingModel === 'InvoiceFactoring'
-        if (filter === 'Discounting') return adv.financingModel === 'InvoiceDiscounting'
-        return true
+        if (filter === 'All') return true
+        const opt = filterOptions.find((o) => o.label === filter)
+        if (!opt?.status) return true
+        return Array.isArray(opt.status)
+            ? opt.status.includes(adv.status)
+            : adv.status === opt.status
     })
 
     return (
         <>
-            <PageHeading title="Admin review" description="Review pending and flagged requests." />
+            <PageHeading
+                title="Admin review"
+                description={`${advances.length} total advance${advances.length !== 1 ? 's' : ''}`}
+            />
             <div className="card">
                 <div className="segmented-control mb-18" role="tablist">
-                    {filterOptions.map((opt) => (
-                        <button key={opt} className={filter === opt ? 'active' : ''} onClick={() => setFilter(opt)} type="button">
-                            {opt}
+                    {filterOptions.map(({ label }) => (
+                        <button
+                            key={label}
+                            className={filter === label ? 'active' : ''}
+                            onClick={() => setFilter(label)}
+                            type="button"
+                        >
+                            {label}
                         </button>
                     ))}
                 </div>
                 <Table
                     headers={['User', 'Model', 'Invoice', 'Amount', 'Score', 'Status', 'Action']}
-                    emptyTitle="No reviews waiting"
-                    emptyDescription="Flagged or pending requests will appear here."
+                    emptyTitle="No advances found"
+                    emptyDescription="Advances matching this filter will appear here."
                     rows={queue.map((adv) => {
                         const inv = invoices.find((i) => i.id === adv.invoiceId)
-                        const usr = mockUsers.find((u) => u.id === adv.userId)
-                        if (!inv || !usr) return []
+                        const usr = resolveUser(adv.userId)
+                        if (!inv) return null
+                        const label = usr ? userLabel(usr) : adv.userId
                         return [
-                            usr.smallBusinessProfile?.businessName ?? usr.freelancerProfile?.fullName ?? usr.email,
+                            label,
                             <ModelBadge key="model" model={adv.financingModel} />,
                             inv.invoiceNumber,
                             formatCurrency(inv.amount, inv.currency),
@@ -198,7 +251,7 @@ export default function AdminReview() {
                                 <Icon name="review" /> Review
                             </button>,
                         ]
-                    })}
+                    }).filter((row): row is NonNullable<typeof row> => row !== null)}
                 />
             </div>
         </>

@@ -1,10 +1,10 @@
 import Navbar from '../components/Navbar/Navbar'
-import Hero from '../components/Hero/Hero'
-import BridgingSection from '../components/BridgingSection/BridgingSection'
-import WhyHassil from '../components/WhyHassil/WhyHassil'
-import CtaSection from '../components/CtaSection/CtaSection'
+import Hero from '../components/LandingPage/Hero/Hero'
+import BridgingSection from '../components/LandingPage/BridgingSection/BridgingSection'
+import WhyHassil from '../components/LandingPage/WhyHassil/WhyHassil'
+import CtaSection from '../components/LandingPage/CtaSection/CtaSection'
 import Footer from '../components/Footer/Footer'
-import AnimatedBackground from '../components/AnimatedBackground/AnimatedBackground'
+import AnimatedBackground from '../components/LandingPage/AnimatedBackground/AnimatedBackground'
 
 export default function LandingPage() {
     return (

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { authApi } from '../data/mockApi'
-import './FreelancerLogin.css'
+import { useAuth } from '../hooks'
+import '../styles/Login.css'
 
 export default function Register() {
     const navigate = useNavigate()
@@ -15,7 +15,9 @@ export default function Register() {
     const isFreelancer = accountType === 'Freelancer'
     const onboardingPath = isFreelancer ? '/onboarding/freelancer' : '/onboarding/SmallBusiness'
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const { signup } = useAuth()
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
 
@@ -28,22 +30,20 @@ export default function Register() {
             return
         }
 
-        const result = authApi.register({
-            email: form.email,
-            passwordHash: form.password,
-            name: form.name,
-            displayName: form.name, // will be updated to company name after onboarding
-            accountType,
-        })
-
-        if (!result.success) {
-            setError(result.error ?? 'Registration failed.')
-            return
+        try {
+            await signup({
+                email: form.email,
+                passwordHash: form.password,
+                name: form.name,
+                displayName: form.name, // will be updated to company name after onboarding
+                accountType,
+            })
+            // Store pending registration so onboarding can pick it up
+            sessionStorage.setItem('hassil_pending_reg', JSON.stringify({ name: form.name, email: form.email, accountType }))
+            navigate(onboardingPath)
+        } catch (err: any) {
+            setError(err.message || 'Registration failed.')
         }
-
-        // Store pending registration so onboarding can pick it up
-        sessionStorage.setItem('hassil_pending_reg', JSON.stringify({ name: form.name, email: form.email, accountType }))
-        navigate(onboardingPath)
     }
 
     return (

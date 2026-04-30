@@ -1159,36 +1159,106 @@ Dashboard:
 
 ```text
 Hassil.Api/
+  ApiEndpoints.cs
+  Program.cs
+  Authentication/
+    DemoBearerAuthenticationDefaults.cs
+    DemoBearerAuthenticationHandler.cs
+  Contracts/
+    AdminReviews/
+      AdminReviewRequests.cs
+      AdminReviewResponses.cs
+    AdvanceRequests/
+      AdvanceRequestRequests.cs
+      AdvanceRequestResponses.cs
+    Auth/
+      AuthRequests.cs
+      AuthResponses.cs
+    ClientConfirmations/
+      ClientConfirmationRequests.cs
+      ClientConfirmationResponses.cs
+    Demo/
+      DemoResponses.cs
+    Invoices/
+      InvoiceRequests.cs
+      InvoiceResponses.cs
+    TrustScores/
+      TrustScoreResponses.cs
+    Users/
+      UserResponses.cs
   Controllers/
-    AuthController.cs
-    OnboardingController.cs
-    InvoicesController.cs
     AdvanceRequestsController.cs
-    ClientConfirmationsController.cs
     AdminReviewsController.cs
-    DashboardController.cs
-  Domain/
-    Models/
-    Enums/
+    AuthController.cs
+    ClientConfirmationsController.cs
+    InvoicesController.cs
+    TrustScoresController.cs
+    DemoController.cs
+    UsersController.cs
   Database/
     Configurations/
     Migrations/
     HassilDbContext.cs
-  Services/
-    InvoiceFingerprintService.cs
-    AdvanceCalculatorService.cs
-    ReviewScoringService.cs
-    AiReviewService.cs
-    TrustScoreService.cs
-    LedgerService.cs
-    MockOpenBankingGateway.cs
-    MockNotificationService.cs
-    DemoSeedService.cs
-  Contracts/
-    Requests/
-    Responses/
+  Domain/
+    Enums/
+    Models/
+  Exceptions/
+    AppException.cs
+  Mappings/
+    AdvanceRequestMappings.cs
+    AdminReviewMappings.cs
+    AuthMappings.cs
+    ClientConfirmationMappings.cs
+    DemoMappings.cs
+    InvoiceMappings.cs
+    TrustScoreMappings.cs
+    UserMappings.cs
   Middleware/
     ErrorHandlingMiddleware.cs
+  Services/
+    AdminReviews/
+      AdminReviewDetail.cs
+      AdminReviewService.cs
+      AiReviewService.cs
+      IAdminReviewService.cs
+      IAiReviewService.cs
+    AdvanceRequests/
+      AdvanceCalculatorService.cs
+      AdvanceQuote.cs
+      AdvanceRequestService.cs
+      IAdvanceCalculatorService.cs
+      IAdvanceRequestService.cs
+      IReviewScoringService.cs
+      ReviewScoringService.cs
+    Auth/
+      AuthService.cs
+      DemoTokenService.cs
+      IAuthService.cs
+      IDemoTokenService.cs
+    Demo/
+      DemoSeedService.cs
+      IDemoSeedService.cs
+    ClientConfirmations/
+      ClientConfirmationService.cs
+      IClientConfirmationService.cs
+    Invoices/
+      IInvoiceFingerprintService.cs
+      IInvoiceService.cs
+      InvoiceFingerprintService.cs
+      InvoiceService.cs
+    Ledger/
+      ILedgerService.cs
+      LedgerService.cs
+    OpenBanking/
+      IOpenBankingGateway.cs
+      MockOpenBankingGateway.cs
+    Notifications/
+      IMockNotificationService.cs
+      MockNotificationService.cs
+    TrustScores/
+      ITrustScoreService.cs
+      TrustScoreHistory.cs
+      TrustScoreService.cs
 ```
 
 Core services:

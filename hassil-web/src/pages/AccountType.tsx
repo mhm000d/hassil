@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import './AccountType.css'
+import '../styles/AccountType.css'
 
 export default function AccountType() {
     const navigate = useNavigate()

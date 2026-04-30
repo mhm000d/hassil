@@ -1,22 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Invoice, User } from '../types'
-import { mockApi, formatCurrency, formatDate } from '../data/mockApi'
-import { mockUsers } from '../data/mockApi'
+import { formatCurrency, formatDate } from '../data/mockApi'
+import { useInvoices } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
 import Table from '../components/Table'
 import Icon from '../components/Icon'
 
-const currentUser: User = mockUsers[0]
-
 export default function Invoices() {
     const navigate = useNavigate()
-    const [invoices, setInvoices] = useState<Invoice[]>([])
+    const { invoices, refetch } = useInvoices()
 
+    // Always fetch fresh data when this page mounts so admin decisions
+    // (approve / reject) are immediately visible to the invoice owner.
     useEffect(() => {
-        mockApi.listInvoices(currentUser.id).then((res) => setInvoices(res.data))
-    }, [])
+        refetch()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <>

@@ -15,10 +15,10 @@ import Register from './pages/Register'
 import Login from './pages/Login'
 import AccountType from './pages/AccountType'
 import AdminLogin from './pages/AdminLogin'
-import FreelancerLogin from './pages/FreelancerLogin'
 import FreelancerOnboarding from './pages/FreelancerOnboarding'
-import CompanyLogin from './pages/CompanyLogin'
 import SmallBusinessOnboarding from './pages/SmallBusinessOnboarding'
+import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 
 function App() {
     return (
@@ -30,27 +30,29 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/account-type" element={<AccountType />} />
                 <Route path="/login/admin" element={<AdminLogin />} />
-                <Route path="/login/freelancer" element={<FreelancerLogin />} />
                 <Route path="/onboarding/freelancer" element={<FreelancerOnboarding />} />
-                <Route path="/login/company" element={<CompanyLogin />} />
                 <Route path="/onboarding/SmallBusiness" element={<SmallBusinessOnboarding />} />
                 <Route path="/client/confirm/:token" element={<ClientConfirmation />} />
                 <Route path="/home/freelancer" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/home/company" element={<Navigate to="/dashboard" replace />} />
 
                 {/* App shell — all authenticated routes */}
-                <Route element={<AppLayout />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/invoices" element={<Invoices />} />
-                    <Route path="/invoices/new" element={<NewInvoice />} />
-                    <Route path="/invoices/:id" element={<InvoiceDetail />} />
-                    <Route path="/invoices/:id/advance" element={<InvoiceAdvance />} />
-                    <Route path="/advances/:id" element={<AdvanceDetail />} />
-                    <Route path="/admin" element={<AdminReview />} />
-                    <Route path="/admin/:advanceId" element={<AdminReview />} />
-                    <Route path="/ledger" element={<Ledger />} />
-                    <Route path="/cash-flow" element={<CashFlow />} />
-                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route element={<ProtectedRoute />}>
+                    <Route element={<AppLayout />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/invoices" element={<Invoices />} />
+                        <Route path="/invoices/new" element={<NewInvoice />} />
+                        <Route path="/invoices/:id" element={<InvoiceDetail />} />
+                        <Route path="/invoices/:id/advance" element={<InvoiceAdvance />} />
+                        <Route path="/advances/:id" element={<AdvanceDetail />} />
+                        <Route element={<AdminRoute />}>
+                            <Route path="/admin" element={<AdminReview />} />
+                            <Route path="/admin/:advanceId" element={<AdminReview />} />
+                        </Route>
+                        <Route path="/ledger" element={<Ledger />} />
+                        <Route path="/cash-flow" element={<CashFlow />} />
+                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                    </Route>
                 </Route>
             </Routes>
         </BrowserRouter>

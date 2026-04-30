@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
-import type { Transaction, TrustScoreEvent, User } from '../types'
-import { mockApi, mockUsers, formatDateTime, getTrustScoreColor } from '../data/mockApi'
+import { useEffect } from 'react'
+import type { User } from '../types'
+import { useAuth, useTransactions } from '../hooks'
+import { mockUsers, formatDateTime, getTrustScoreColor } from '../data/mockApi'
 import PageHeading from '../components/PageHeading'
 import TransactionTimeline from '../components/TransactionTimeline'
-
-const currentUser: User = mockUsers[0]
 
 function TrustBreakdown({ user }: { user: User }) {
     const repaid = 1
@@ -30,13 +29,15 @@ function TrustBreakdown({ user }: { user: User }) {
 }
 
 export default function Ledger() {
-    const [transactions, setTransactions] = useState<Transaction[]>([])
-    const [trustEvents, setTrustEvents] = useState<TrustScoreEvent[]>([])
+    const { user: authUser } = useAuth()
+    const { transactions, trustScoreEvents, refetch } = useTransactions()
+    const user = authUser || mockUsers[0]
 
+    // Refresh on mount so the ledger always reflects the latest transactions
+    // and trust score events (e.g. after a simulation on the advance page).
     useEffect(() => {
-        mockApi.listTransactions(currentUser.id).then((res) => setTransactions(res.data))
-        mockApi.listTrustScoreEvents(currentUser.id).then((res) => setTrustEvents(res.data))
-    }, [])
+        refetch()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <>
@@ -51,10 +52,10 @@ export default function Ledger() {
                 </div>
                 <div className="card card-gold">
                     <h2 className="card-title">Trust score events</h2>
-                    <TrustBreakdown user={currentUser} />
+                    <TrustBreakdown user={user} />
                     <div className="timeline mt-16">
-                        {trustEvents.length === 0 && <p className="soft-text">No trust score events yet.</p>}
-                        {trustEvents.map((event) => (
+                        {trustScoreEvents.length === 0 && <p className="soft-text">No trust score events yet.</p>}
+                        {trustScoreEvents.map((event) => (
                             <div className="timeline-item" key={event.id}>
                                 <span
                                     className="timeline-dot"

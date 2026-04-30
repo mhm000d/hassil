@@ -28,6 +28,14 @@ public static class ApiEndpoints
         public const string Me = $"{Base}/me";
     }
 
+    // -- Trust Score Endpoints ----------------------------------------------
+    public static class TrustScores
+    {
+        private const string Base = $"{ApiBase}/trust-score";
+
+        public const string Events = $"{Base}/events";
+    }
+
     // -- Invoice Endpoints ----------------------------------------------------
     public static class Invoices
     {
@@ -38,5 +46,44 @@ public static class ApiEndpoints
         public const string Get = $"{Base}/{{id:guid}}";
         public const string AddDocument = $"{Base}/{{id:guid}}/documents";
         public const string Submit = $"{Base}/{{id:guid}}/submit";
+    }
+
+    // -- Advance Request Endpoints -------------------------------------------
+    public static class AdvanceRequests
+    {
+        private const string Base = $"{ApiBase}/advance-requests";
+
+        public const string Quote = $"{Base}/quote";
+        public const string Create = Base;
+        public const string GetAll = Base;
+        public const string Get = $"{Base}/{{id:guid}}";
+        public const string SimulateDisbursement = $"{Base}/{{id:guid}}/simulate-disbursement";
+        public const string SimulateClientPaymentDetected = $"{Base}/{{id:guid}}/simulate-client-payment-detected";
+        public const string SimulateUserRepayment = $"{Base}/{{id:guid}}/simulate-user-repayment";
+        public const string SimulateClientPaymentToHassil = $"{Base}/{{id:guid}}/simulate-client-payment-to-hassil";
+        public const string SimulateBufferRelease = $"{Base}/{{id:guid}}/simulate-buffer-release";
+    }
+
+    // -- Client Confirmation Endpoints ---------------------------------------
+    public static class ClientConfirmations
+    {
+        private const string Base = $"{ApiBase}/client-confirmations";
+
+        public const string Get = $"{Base}/{{token}}";
+        public const string Confirm = $"{Base}/{{token}}/confirm";
+        public const string Dispute = $"{Base}/{{token}}/dispute";
+    }
+
+    // -- Admin Review Endpoints ---------------------------------------------
+    public static class Admin
+    {
+        private const string AdvanceBase = $"{ApiBase}/admin/advance-requests";
+
+        public const string GetPendingAdvanceRequests = $"{AdvanceBase}/pending";
+        public const string GetAdvanceRequest = $"{AdvanceBase}/{{id:guid}}";
+        public const string ApproveAdvanceRequest = $"{AdvanceBase}/{{id:guid}}/approve";
+        public const string RejectAdvanceRequest = $"{AdvanceBase}/{{id:guid}}/reject";
+        public const string RequestMoreInfo = $"{AdvanceBase}/{{id:guid}}/request-more-info";
+        public const string GenerateAiReview = $"{AdvanceBase}/{{id:guid}}/ai-review";
     }
 }

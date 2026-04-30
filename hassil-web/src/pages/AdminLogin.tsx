@@ -1,18 +1,28 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import './FreelancerLogin.css'
+import { useAuth } from '../hooks'
+import '../styles/Login.css'
 
 export default function AdminLogin() {
     const navigate = useNavigate()
     const { login } = useAuth()
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
+    const [email, setEmail] = useState('admin@hassil.io')
+    const [password, setPassword] = useState('1')
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        login({ name: 'Hassil', displayName: 'Hassil', email: email || 'admin@hassil.io', accountType: 'SmallBusiness' })
-        navigate('/admin')
+        setLoading(true)
+        setError(null)
+        try {
+            await login({ email, password })
+            navigate('/admin')
+        } catch (err: any) {
+            setError(err.message || 'Login failed')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -24,6 +34,8 @@ export default function AdminLogin() {
                 </div>
                 
                 <form className="login-form" onSubmit={handleSubmit}>
+                    {error && <div className="feedback-item error mb-18">{error}</div>}
+                    
                     <div className="form-group">
                         <label htmlFor="email">Email Address</label>
                         <input
@@ -31,8 +43,9 @@ export default function AdminLogin() {
                             id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="admin@hassil.com"
+                            placeholder="admin@hassil.io"
                             required
+                            disabled={loading}
                         />
                     </div>
                     
@@ -45,16 +58,17 @@ export default function AdminLogin() {
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
                             required
+                            disabled={loading}
                         />
                     </div>
 
                     <div className="form-actions" style={{ marginTop: '24px' }}>
-                        <button type="submit" className="btn btn-primary full-width">
-                            Sign In
+                        <button type="submit" className="btn btn-primary full-width" disabled={loading}>
+                            {loading ? 'Signing In...' : 'Sign In'}
                         </button>
                     </div>
                     <div style={{ textAlign: 'center', marginTop: 16 }}>
-                        <a href="/" className="login-card__back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--gray)', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+                        <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--gray)', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
                             ← Back to Home
                         </a>
                     </div>
