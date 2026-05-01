@@ -111,6 +111,8 @@ Hassil handles two primary financing models seamlessly:
 ```
 **Note!** You can access the admin dashboard/review via `/login/admin` URL
 
+app URL: https://hassil-cash.vercel.app/
+
 ## 🤝 Contributing
 
 We welcome contributions! Please follow these steps:
