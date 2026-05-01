@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.OpenApi;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,9 +52,11 @@ builder.Services.AddCors(options =>
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
+#pragma warning disable ASPDEPR005
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
+#pragma warning restore ASPDEPR005
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -78,10 +81,10 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+var connectionString = ResolvePostgresConnectionString(builder.Configuration);
+
 builder.Services.AddDbContext<HassilDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("Connection string is not configured.")));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddSingleton<IDemoTokenService, DemoTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -103,6 +106,59 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 var app = builder.Build();
+
+static string ResolvePostgresConnectionString(IConfiguration configuration)
+{
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    if (!string.IsNullOrWhiteSpace(databaseUrl))
+    {
+        return ConvertPostgresUrlToConnectionString(databaseUrl);
+    }
+
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException("Connection string is not configured.");
+    }
+
+    return ConvertPostgresUrlToConnectionString(connectionString);
+}
+
+static string ConvertPostgresUrlToConnectionString(string connectionString)
+{
+    if (!connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
+        !connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+    {
+        return connectionString;
+    }
+
+    var uri = new Uri(connectionString);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var builder = new NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
+        Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        SslMode = SslMode.Require
+    };
+
+    if (!string.IsNullOrEmpty(uri.Query))
+    {
+        var queryParts = uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var part in queryParts)
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length == 2)
+            {
+                builder[pair[0]] = Uri.UnescapeDataString(pair[1]);
+            }
+        }
+    }
+
+    return builder.ConnectionString;
+}
 
 using (var scope = app.Services.CreateScope())
 {
