@@ -13,8 +13,19 @@ public class OnboardingController(IOnboardingService onboardingService) : Contro
         [FromBody] CreateSmallBusinessOnboardingRequest request,
         CancellationToken ct)
     {
-        var authResult = await onboardingService.CreateSmallBusinessAsync(request, ct);
-        return Ok(authResult.ToResponse());
+        try
+        {
+            var authResult = await onboardingService.CreateSmallBusinessAsync(request, ct);
+            var response = authResult.ToResponse();
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            // Log the exception details
+            Console.WriteLine($"Onboarding error: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            throw;
+        }
     }
 
     [HttpPost(ApiEndpoints.Onboarding.Freelancer)]
