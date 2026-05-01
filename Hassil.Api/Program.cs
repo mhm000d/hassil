@@ -16,9 +16,20 @@ using Hassil.Api.Services.Transactions;
 using Hassil.Api.Services.TrustScores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    builder.WebHost.UseUrls($"http://*:{port}");
+}
+else
+{
+    builder.WebHost.UseUrls("http://*:8080");
+}
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
@@ -36,6 +47,13 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
+});
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -110,6 +128,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 app.UseCors("DefaultCorsPolicy");
 
