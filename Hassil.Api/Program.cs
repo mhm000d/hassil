@@ -144,27 +144,6 @@ static string ConvertPostgresUrlToConnectionString(string connectionString)
         SslMode = SslMode.Require
     };
 
-    if (!string.IsNullOrEmpty(uri.Query))
-    {
-        var queryParts = uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries);
-        var knownKeys = new[] { "sslmode", "ssl mode" };
-        foreach (var part in queryParts)
-        {
-            var pair = part.Split('=', 2);
-            if (pair.Length == 2 && knownKeys.Contains(pair[0].ToLowerInvariant()))
-            {
-                try
-                {
-                    builder[pair[0]] = Uri.UnescapeDataString(pair[1]);
-                }
-                catch
-                {
-                    // Skip unsupported query parameters
-                }
-            }
-        }
-    }
-
     return builder.ConnectionString;
 }
 
