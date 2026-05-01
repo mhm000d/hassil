@@ -163,15 +163,15 @@ static string ConvertPostgresUrlToConnectionString(string connectionString)
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<HassilDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     try
     {
         dbContext.Database.Migrate();
+        logger.LogInformation("Database migration completed successfully.");
     }
     catch (Exception ex)
     {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Database migration failed during startup.");
-        throw;
+        logger.LogWarning(ex, "Database migration failed during startup. The application will continue, but database operations may fail. Ensure DATABASE_URL or connection string is properly configured.");
     }
 }
 
