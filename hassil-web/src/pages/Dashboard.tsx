@@ -3,44 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import type { DashboardSummary } from '../types'
 import { formatCurrency, getModelLabel } from '../utils/formatters'
 import { DashboardService } from '../services'
-import { useAuth, useAdvances, useInvoices } from '../hooks'
-import Icon, { type IconName } from '../components/Icon'
+import { useAuth, useInvoices } from '../hooks'
+import Icon from '../components/Icon'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
 import Table from '../components/Table'
 import TransactionTimeline from '../components/TransactionTimeline'
 
-type DashboardAction = {
-    title: string
-    description: string
-    label: string
-    icon: IconName
-    tone: 'primary' | 'warning' | 'success' | 'default'
-    count?: number
-    onClick: () => void
-}
-
-function PriorityCard({ action }: { action: DashboardAction }) {
-    return (
-        <button className={`dashboard-priority-card ${action.tone}`} onClick={action.onClick}>
-            <span className="dashboard-priority-icon">
-                <Icon name={action.icon} />
-            </span>
-            <span className="dashboard-priority-body">
-                <strong>{action.title}</strong>
-                <em>{action.description}</em>
-            </span>
-            {typeof action.count === 'number' && <span className="dashboard-priority-count">{action.count}</span>}
-            <span className="dashboard-priority-cta">{action.label}</span>
-        </button>
-    )
-}
-
 export default function Dashboard() {
     const navigate = useNavigate()
     const { user } = useAuth()
     const { invoices } = useInvoices()
-    const { advances } = useAdvances()
     const [summary, setSummary] = useState<DashboardSummary | null>(null)
     const [loadingSummary, setLoadingSummary] = useState(true)
     const [summaryError, setSummaryError] = useState<string | null>(null)
@@ -91,13 +64,6 @@ export default function Dashboard() {
     const financingModel = summary?.financingModel
         ?? (user.accountType === 'Freelancer' ? 'InvoiceDiscounting' : 'InvoiceFactoring')
     const model = getModelLabel(financingModel)
-    const quoteReadyInvoices = invoices.filter((invoice) => invoice.status === 'Submitted' && !invoice.advanceRequestId)
-    const draftInvoices = invoices.filter((invoice) => invoice.status === 'Draft')
-    const pendingClientAdvances = advances.filter((advance) => advance.status === 'PendingClientConfirmation')
-    const pendingReviewAdvances = advances.filter((advance) => advance.status === 'PendingReview')
-    const approvedAdvances = advances.filter((advance) => advance.status === 'Approved')
-    const settlementAdvances = advances.filter((advance) =>
-        ['Disbursed', 'ClientPaymentDetected', 'ClientPaidHassil'].includes(advance.status))
 
     // const firstActionInvoice = quoteReadyInvoices[0] ?? draftInvoices[0] ?? invoices.find((invoice) => !invoice.advanceRequestId)
 
@@ -111,72 +77,6 @@ export default function Dashboard() {
     }
     const waitingChecks = reviewStates.pendingClientConfirmation + reviewStates.pendingReview
     const recentTx = summary?.recentTransactions ?? []
-    const priorityActions: DashboardAction[] = [
-        ...(quoteReadyInvoices.length > 0 ? [{
-            title: 'Invoices ready for quote',
-            description: 'Submitted invoices can now show available cash and fee.',
-            label: 'View quote',
-            icon: 'advance' as IconName,
-            tone: 'primary' as const,
-            count: quoteReadyInvoices.length,
-            onClick: () => navigate(`/invoices/${quoteReadyInvoices[0].id}/advance`),
-        }] : []),
-        ...(pendingClientAdvances.length > 0 ? [{
-            title: 'Waiting on client confirmation',
-            description: 'Factoring requests need client approval before review completes.',
-            label: 'Track',
-            icon: 'review' as IconName,
-            tone: 'warning' as const,
-            count: pendingClientAdvances.length,
-            onClick: () => navigate(`/advances/${pendingClientAdvances[0].id}`),
-        }] : []),
-        ...(approvedAdvances.length > 0 ? [{
-            title: 'Approved advances ready',
-            description: 'Funding is approved and ready to continue.',
-            label: 'Continue',
-            icon: 'advance' as IconName,
-            tone: 'success' as const,
-            count: approvedAdvances.length,
-            onClick: () => navigate(`/advances/${approvedAdvances[0].id}`),
-        }] : []),
-        ...(pendingReviewAdvances.length > 0 ? [{
-            title: 'Under review',
-            description: 'Requests are waiting for risk and admin decisioning.',
-            label: 'Track review',
-            icon: 'review' as IconName,
-            tone: 'default' as const,
-            count: pendingReviewAdvances.length,
-            onClick: () => navigate(`/advances/${pendingReviewAdvances[0].id}`),
-        }] : []),
-        ...(settlementAdvances.length > 0 ? [{
-            title: 'Settlement in progress',
-            description: 'Follow repayment, client payment, or buffer release.',
-            label: 'Track',
-            icon: 'ledger' as IconName,
-            tone: 'primary' as const,
-            count: settlementAdvances.length,
-            onClick: () => navigate(`/advances/${settlementAdvances[0].id}`),
-        }] : []),
-        ...(draftInvoices.length > 0 ? [{
-            title: 'Draft invoices unfinished',
-            description: 'Submit drafts to unlock quote and advance options.',
-            label: 'Continue',
-            icon: 'invoice' as IconName,
-            tone: 'warning' as const,
-            count: draftInvoices.length,
-            onClick: () => navigate(`/invoices/${draftInvoices[0].id}`),
-        }] : []),
-    ]
-    const visiblePriorityActions = priorityActions.length > 0
-        ? priorityActions.slice(0, 4)
-        : [{
-            title: 'Create an invoice',
-            description: 'Start with a confirmed invoice to see your advance options.',
-            label: 'Create invoice',
-            icon: 'plus' as IconName,
-            tone: 'primary' as const,
-            onClick: () => navigate('/invoices/new'),
-        }]
 
     return (
         <>

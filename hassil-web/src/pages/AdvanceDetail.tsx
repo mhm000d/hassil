@@ -9,13 +9,11 @@ import {
 import { useInvoices, useAdvances, useTransactions } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
-import ModelBadge from '../components/ModelBadge'
 import DetailGrid from '../components/DetailGrid'
 import DisclosurePanel from '../components/DisclosurePanel'
 import LifecycleStepper from '../components/LifecycleStepper'
 import TransactionTimeline from '../components/TransactionTimeline'
 import Breadcrumbs from '../components/Breadcrumbs'
-import Icon from '../components/Icon'
 
 function StatCard({ tone, label, value, sub }: { tone: 'gold' | 'green' | 'amber'; label: string; value: string; sub?: string }) {
     const toneLabel = { gold: '01', green: '02', amber: '03' }[tone]

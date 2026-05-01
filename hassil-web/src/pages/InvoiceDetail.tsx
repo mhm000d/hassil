@@ -1,35 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { AdvanceQuote, Invoice } from '../types'
+import type { Invoice } from '../types'
 import { formatCurrency, formatDate } from '../utils/formatters'
-import { useInvoices, useAdvances } from '../hooks'
+import { useInvoices } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import StatusBadge from '../components/StatusBadge'
-import ModelBadge from '../components/ModelBadge'
 import DetailGrid from '../components/DetailGrid'
 import DisclosurePanel from '../components/DisclosurePanel'
 import Breadcrumbs from '../components/Breadcrumbs'
 
-function canQuoteInvoice(invoice: Invoice) {
-    return !['Paid', 'Rejected', 'Cancelled'].includes(invoice.status)
-}
-
-function canRequestAdvance(invoice: Invoice) {
-    return invoice.status === 'Submitted' && !invoice.advanceRequestId
-}
-
-
-
 export default function InvoiceDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { get: getInvoice, addDocument: addInvoiceDocument, submit: submitInvoice } = useInvoices()
-    const { quote: quoteAdvance } = useAdvances()
+    const { get: getInvoice } = useInvoices()
     const [invoice, setInvoice] = useState<Invoice | null>(null)
-    const [quote, setQuote] = useState<AdvanceQuote | null>(null)
-    const [quoteLoading, setQuoteLoading] = useState(false)
     const [actionError, setActionError] = useState('')
-    const [actionLoading, setActionLoading] = useState(false)
 
     useEffect(() => {
         let active = true
@@ -51,51 +36,6 @@ export default function InvoiceDetail() {
             active = false
         }
     }, [id, getInvoice])
-
-    useEffect(() => {
-        let active = true
-
-        const loadQuote = async () => {
-            if (!invoice || !canQuoteInvoice(invoice)) {
-                setQuote(null)
-                setQuoteError('')
-                return
-            }
-
-            try {
-                setQuoteLoading(true)
-                const quoteData = await quoteAdvance({ invoiceId: invoice.id })
-                if (active) setQuote(quoteData)
-                if (active) {
-                    setQuote(null)
-                }
-            } finally {
-                if (active) setQuoteLoading(false)
-            }
-        }
-
-        loadQuote()
-
-        return () => {
-            active = false
-        }
-    }, [invoice, quoteAdvance])
-
-
-
-    const submitForReview = async () => {
-        if (!invoice || actionLoading) return
-        setActionError('')
-        setActionLoading(true)
-        try {
-            const submitted = await submitInvoice(invoice.id)
-            setInvoice(submitted)
-        } catch (err: any) {
-            setActionError(err.message || 'Could not submit invoice.')
-        } finally {
-            setActionLoading(false)
-        }
-    }
 
     if (!invoice) {
         return (
