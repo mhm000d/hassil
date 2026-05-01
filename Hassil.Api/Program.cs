@@ -28,6 +28,16 @@ builder.Services.AddAuthentication(DemoBearerAuthenticationDefaults.Scheme)
         _ => { });
 builder.Services.AddAuthorization();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DefaultCorsPolicy", policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -86,6 +96,7 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.UseHttpsRedirection();
+app.UseCors("DefaultCorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();
