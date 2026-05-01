@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: process.env.VITE_API_PROXY_TARGET ?? 'https://localhost:7087',
+        target: process.env.VITE_API_PROXY_TARGET ?? 'https://hassil.onrender.com' /*'https://localhost:7087'*/,
         changeOrigin: true,
         secure: false,
       },
