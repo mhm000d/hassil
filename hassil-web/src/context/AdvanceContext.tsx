@@ -16,11 +16,6 @@ interface AdvanceContextValue {
     get: (id: string) => Promise<AdvanceRequest | undefined>
     create: (request: CreateAdvanceRequestPayload) => Promise<AdvanceRequest>
     update: (id: string, patch: Partial<AdvanceRequest>) => Promise<AdvanceRequest | undefined>
-    simulateDisbursement: (id: string) => Promise<AdvanceRequest>
-    simulateClientPaymentDetected: (id: string) => Promise<AdvanceRequest>
-    simulateUserRepayment: (id: string) => Promise<AdvanceRequest>
-    simulateClientPaymentToHassil: (id: string) => Promise<AdvanceRequest>
-    simulateBufferRelease: (id: string) => Promise<AdvanceRequest>
 }
 
 export const AdvanceContext = createContext<AdvanceContextValue>({
@@ -36,21 +31,6 @@ export const AdvanceContext = createContext<AdvanceContextValue>({
         throw new Error('Advance provider is not ready')
     },
     update: async () => undefined,
-    simulateDisbursement: async () => {
-        throw new Error('Advance provider is not ready')
-    },
-    simulateClientPaymentDetected: async () => {
-        throw new Error('Advance provider is not ready')
-    },
-    simulateUserRepayment: async () => {
-        throw new Error('Advance provider is not ready')
-    },
-    simulateClientPaymentToHassil: async () => {
-        throw new Error('Advance provider is not ready')
-    },
-    simulateBufferRelease: async () => {
-        throw new Error('Advance provider is not ready')
-    },
 })
 
 export function AdvanceProvider({ children }: { children: ReactNode }) {
@@ -119,36 +99,6 @@ export function AdvanceProvider({ children }: { children: ReactNode }) {
         return updated
     }, [])
 
-    const simulateDisbursement = useCallback(async (id: string) => {
-        const res = await AdvanceService.simulateDisbursement(id)
-        upsertAdvance(res)
-        return res
-    }, [upsertAdvance])
-
-    const simulateClientPaymentDetected = useCallback(async (id: string) => {
-        const res = await AdvanceService.simulateClientPaymentDetected(id)
-        upsertAdvance(res)
-        return res
-    }, [upsertAdvance])
-
-    const simulateUserRepayment = useCallback(async (id: string) => {
-        const res = await AdvanceService.simulateUserRepayment(id)
-        upsertAdvance(res)
-        return res
-    }, [upsertAdvance])
-
-    const simulateClientPaymentToHassil = useCallback(async (id: string) => {
-        const res = await AdvanceService.simulateClientPaymentToHassil(id)
-        upsertAdvance(res)
-        return res
-    }, [upsertAdvance])
-
-    const simulateBufferRelease = useCallback(async (id: string) => {
-        const res = await AdvanceService.simulateBufferRelease(id)
-        upsertAdvance(res)
-        return res
-    }, [upsertAdvance])
-
     const value = useMemo<AdvanceContextValue>(() => ({
         advances,
         loading,
@@ -158,11 +108,6 @@ export function AdvanceProvider({ children }: { children: ReactNode }) {
         get,
         create,
         update,
-        simulateDisbursement,
-        simulateClientPaymentDetected,
-        simulateUserRepayment,
-        simulateClientPaymentToHassil,
-        simulateBufferRelease,
     }), [
         advances,
         loading,
@@ -172,11 +117,6 @@ export function AdvanceProvider({ children }: { children: ReactNode }) {
         get,
         create,
         update,
-        simulateDisbursement,
-        simulateClientPaymentDetected,
-        simulateUserRepayment,
-        simulateClientPaymentToHassil,
-        simulateBufferRelease,
     ])
 
     return (

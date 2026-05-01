@@ -76,6 +76,7 @@ export default function ClientConfirmation() {
     }
 
     const getReturnPath = (currentDetails = details) => {
+        if (user?.role === 'Admin' && currentDetails?.advanceRequest?.id) return `/admin/${currentDetails.advanceRequest.id}`
         if (user && currentDetails?.advanceRequest?.id) return `/advances/${currentDetails.advanceRequest.id}`
         if (user) return '/dashboard'
         return null

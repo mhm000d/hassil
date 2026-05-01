@@ -25,13 +25,16 @@ public record AdvanceRequestSummaryResponse(
     Guid Id,
     Guid InvoiceId,
     string InvoiceNumber,
+    Guid UserId,
     string FinancingModel,
     decimal AdvanceAmount,
     decimal FeeAmount,
     decimal ExpectedRepaymentAmount,
     int ReviewScore,
     string Status,
-    DateTimeOffset CreatedAt);
+    string? ClientConfirmationStatus,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
 
 public record AdvanceRequestResponse(
     Guid Id,

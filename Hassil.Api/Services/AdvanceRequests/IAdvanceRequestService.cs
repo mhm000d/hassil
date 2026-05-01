@@ -23,29 +23,4 @@ public interface IAdvanceRequestService
         Guid userId,
         Guid advanceRequestId,
         CancellationToken ct = default);
-
-    Task<AdvanceRequest> SimulateDisbursementAsync(
-        Guid userId,
-        Guid advanceRequestId,
-        CancellationToken ct = default);
-
-    Task<AdvanceRequest> SimulateClientPaymentDetectedAsync(
-        Guid userId,
-        Guid advanceRequestId,
-        CancellationToken ct = default);
-
-    Task<AdvanceRequest> SimulateUserRepaymentAsync(
-        Guid userId,
-        Guid advanceRequestId,
-        CancellationToken ct = default);
-
-    Task<AdvanceRequest> SimulateClientPaymentToHassilAsync(
-        Guid userId,
-        Guid advanceRequestId,
-        CancellationToken ct = default);
-
-    Task<AdvanceRequest> SimulateBufferReleaseAsync(
-        Guid userId,
-        Guid advanceRequestId,
-        CancellationToken ct = default);
 }

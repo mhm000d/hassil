@@ -21,6 +21,7 @@ public record InvoiceResponse(
 
 public record InvoiceSummaryResponse(
     Guid Id,
+    Guid UserId,
     string InvoiceNumber,
     ClientResponse Client,
     string ReceivableSource,

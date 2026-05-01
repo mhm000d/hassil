@@ -1,4 +1,4 @@
-import type { AdvanceRequest, FinancingModel } from '../types'
+import type { FinancingModel } from '../types'
 
 export function formatCurrency(value: number, currency = 'USD') {
     return new Intl.NumberFormat('en-US', {
@@ -75,16 +75,4 @@ export function getTrustScoreLabel(score: number): string {
     if (score >= 75) return 'Good'
     if (score >= 50) return 'Fair'
     return 'Low'
-}
-
-export function getNextSimulationLabel(status: AdvanceRequest['status'], model: FinancingModel): string | null {
-    if (status === 'Approved') return 'Simulate disbursement'
-    if (model === 'InvoiceFactoring') {
-        if (status === 'Disbursed') return 'Simulate client payment'
-        if (status === 'ClientPaidHassil') return 'Simulate buffer release'
-    } else {
-        if (status === 'Disbursed') return 'Simulate payment detection'
-        if (status === 'ClientPaymentDetected') return 'Simulate repayment'
-    }
-    return null
 }

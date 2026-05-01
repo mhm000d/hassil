@@ -49,17 +49,21 @@ export interface ApiAdvanceRequestSummaryResponse {
     id: string
     invoiceId: string
     invoiceNumber: string
+    userId: string
     financingModel: string
     advanceAmount: number
     feeAmount: number
     expectedRepaymentAmount: number
     reviewScore: number
     status: string
+    clientConfirmationStatus?: string | null
     createdAt: string
+    updatedAt: string
 }
 
 export interface ApiAdvanceInvoiceSummaryResponse {
     id: string
+    userId: string
     invoiceNumber: string
 }
 
@@ -142,7 +146,7 @@ export function mapAdvanceSummary(response: ApiAdvanceRequestSummaryResponse): A
         id: response.id,
         invoiceId: response.invoiceId,
         invoiceNumber: response.invoiceNumber,
-        userId: '',
+        userId: response.userId,
         financingModel,
         repaymentParty: deriveRepaymentParty(financingModel),
         paymentDestination: derivePaymentDestination(financingModel),
@@ -157,8 +161,11 @@ export function mapAdvanceSummary(response: ApiAdvanceRequestSummaryResponse): A
         expectedRepaymentAmount: response.expectedRepaymentAmount,
         reviewScore: response.reviewScore,
         status: response.status as AdvanceStatus,
+        clientConfirmationStatus: response.clientConfirmationStatus
+            ? response.clientConfirmationStatus as ConfirmationStatus
+            : undefined,
         createdAt: response.createdAt,
-        updatedAt: response.createdAt,
+        updatedAt: response.updatedAt,
     }
 }
 
@@ -166,10 +173,11 @@ function mapTransaction(
     response: ApiAdvanceTransactionResponse,
     advanceRequestId: string,
     invoiceId: string,
+    userId: string,
 ): Transaction {
     return {
         id: response.id,
-        userId: '',
+        userId,
         invoiceId,
         advanceRequestId,
         type: response.type as TransactionType,
@@ -182,12 +190,13 @@ function mapTransaction(
 
 export function mapAdvanceResponse(response: ApiAdvanceRequestResponse): AdvanceRequest {
     const invoiceId = response.invoice.id
+    const userId = response.invoice.userId
 
     return {
         id: response.id,
         invoiceId,
         invoiceNumber: response.invoice.invoiceNumber,
-        userId: '',
+        userId,
         financingModel: response.financingModel as FinancingModel,
         repaymentParty: response.repaymentParty as RepaymentParty,
         paymentDestination: response.paymentDestination as PaymentDestination,
@@ -209,15 +218,10 @@ export function mapAdvanceResponse(response: ApiAdvanceRequestResponse): Advance
         reviewedAt: response.reviewedAt,
         termsAcceptedAt: response.termsAcceptedAt,
         termsVersion: response.termsVersion,
-        transactions: response.transactions.map((transaction) => mapTransaction(transaction, response.id, invoiceId)),
+        transactions: response.transactions.map((transaction) => mapTransaction(transaction, response.id, invoiceId, userId)),
         createdAt: response.createdAt,
         updatedAt: response.updatedAt,
     }
-}
-
-const simulate = async (id: string, action: string) => {
-    const response = await api.post<ApiAdvanceRequestResponse>(`/advance-requests/${id}/${action}`)
-    return mapAdvanceResponse(response)
 }
 
 export const AdvanceService = {
@@ -240,10 +244,4 @@ export const AdvanceService = {
         const response = await api.post<ApiAdvanceRequestResponse>('/advance-requests', request)
         return mapAdvanceResponse(response)
     },
-
-    simulateDisbursement: (id: string) => simulate(id, 'simulate-disbursement'),
-    simulateClientPaymentDetected: (id: string) => simulate(id, 'simulate-client-payment-detected'),
-    simulateUserRepayment: (id: string) => simulate(id, 'simulate-user-repayment'),
-    simulateClientPaymentToHassil: (id: string) => simulate(id, 'simulate-client-payment-to-hassil'),
-    simulateBufferRelease: (id: string) => simulate(id, 'simulate-buffer-release'),
 }

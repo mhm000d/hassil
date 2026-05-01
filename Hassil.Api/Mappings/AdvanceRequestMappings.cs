@@ -29,13 +29,16 @@ public static class AdvanceRequestMappings
         Id:                      request.Id,
         InvoiceId:               request.InvoiceId,
         InvoiceNumber:           request.Invoice.InvoiceNumber,
+        UserId:                  request.UserId,
         FinancingModel:          request.FinancingModel.ToString(),
         AdvanceAmount:           request.AdvanceAmount,
         FeeAmount:               request.FeeAmount,
         ExpectedRepaymentAmount: request.ExpectedRepaymentAmount,
         ReviewScore:             request.ReviewScore,
         Status:                  request.Status.ToString(),
-        CreatedAt:               request.CreatedAt);
+        ClientConfirmationStatus: request.Invoice.ClientConfirmation?.Status.ToString(),
+        CreatedAt:               request.CreatedAt,
+        UpdatedAt:               request.UpdatedAt);
 
     public static AdvanceRequestResponse ToResponse(this AdvanceRequest request) => new(
         Id:                            request.Id,

@@ -67,7 +67,7 @@ export const tokensFromAuthResponse = (response: AuthResponse): Tokens => ({
 
 export const saveRequesterSession = (user: User | null): void => {
     const tokens = getStoredTokens()
-    if (!user || user.role === 'Admin' || !tokens?.accessToken) return
+    if (!user || !tokens?.accessToken) return
 
     localStorage.setItem(REQUESTER_SESSION_KEY, JSON.stringify({
         tokens,
@@ -91,6 +91,20 @@ export const restoreRequesterSession = (): boolean => {
         return false
     } finally {
         localStorage.removeItem(REQUESTER_SESSION_KEY)
+    }
+}
+
+export const hasRequesterSessionSnapshot = (): boolean => {
+    const sessionJson = localStorage.getItem(REQUESTER_SESSION_KEY)
+    if (!sessionJson) return false
+
+    try {
+        const session = JSON.parse(sessionJson) as { tokens?: Tokens }
+        return !!session.tokens?.accessToken
+    } catch (error) {
+        console.error('Failed to inspect requester session snapshot:', error)
+        localStorage.removeItem(REQUESTER_SESSION_KEY)
+        return false
     }
 }
 

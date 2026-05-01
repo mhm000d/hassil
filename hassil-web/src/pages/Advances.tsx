@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { formatCurrency, formatDateTime, getNextSimulationLabel } from '../utils/formatters'
+import { formatCurrency, formatDateTime } from '../utils/formatters'
 import { useAdvances } from '../hooks'
 import type { AdvanceRequest } from '../types'
 import Icon, { type IconName } from '../components/Icon'
@@ -22,12 +22,9 @@ function nextActionFor(advance: AdvanceRequest, navigate: ReturnType<typeof useN
 
     if (advance.status === 'PendingClientConfirmation') {
         title = 'Client confirmation needed'
-        hint = 'Send or open the confirmation link before review can finish.'
-        label = advance.clientConfirmationToken ? 'Open link' : 'Track'
-        icon = advance.clientConfirmationToken ? 'link' : 'review'
-        target = advance.clientConfirmationToken
-            ? `/client/confirm/${advance.clientConfirmationToken}`
-            : `/advances/${advance.id}`
+        hint = 'Hassil operations will send and track the client confirmation link.'
+        label = 'Track'
+        icon = 'review'
         tone = 'warning'
     } else if (advance.status === 'PendingReview') {
         title = 'Under review'
@@ -37,8 +34,8 @@ function nextActionFor(advance: AdvanceRequest, navigate: ReturnType<typeof useN
         tone = 'primary'
     } else if (advance.status === 'Approved') {
         title = 'Ready to fund'
-        hint = 'Approved and waiting for disbursement.'
-        label = 'Continue'
+        hint = 'Approved and waiting for Hassil operations to disburse.'
+        label = 'Track'
         icon = 'advance'
         tone = 'success'
     } else if (advance.status === 'Disbursed') {
@@ -58,9 +55,9 @@ function nextActionFor(advance: AdvanceRequest, navigate: ReturnType<typeof useN
         icon = 'ledger'
         tone = 'warning'
     } else if (advance.status === 'ClientPaidHassil') {
-        title = 'Release buffer'
-        hint = 'Client paid Hassil. Release the remaining balance.'
-        label = 'Settle'
+        title = 'Buffer release pending'
+        hint = 'Client paid Hassil. Operations will release the remaining balance.'
+        label = 'Track'
         icon = 'ledger'
         tone = 'success'
     } else if (['Repaid', 'BufferReleased'].includes(advance.status)) {
@@ -75,14 +72,11 @@ function nextActionFor(advance: AdvanceRequest, navigate: ReturnType<typeof useN
         tone = 'warning'
     }
 
-    const nextSimulationLabel = getNextSimulationLabel(advance.status, advance.financingModel)
-
     return (
         <div className={`invoice-next-action advance-next-action ${tone}`}>
             <div>
                 <strong>{title}</strong>
                 <span>{hint}</span>
-                {nextSimulationLabel && <em>{nextSimulationLabel}</em>}
             </div>
             <button className={`btn ${tone === 'primary' ? 'btn-primary' : 'btn-secondary'} btn-sm`} onClick={() => navigate(target)}>
                 <Icon name={icon} /> {label}

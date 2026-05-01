@@ -3,6 +3,9 @@ using Hassil.Api.Domain.Enums;
 using Hassil.Api.Domain.Models;
 using Hassil.Api.Exceptions;
 using Hassil.Api.Services.AdvanceRequests;
+using Hassil.Api.Services.Ledger;
+using Hassil.Api.Services.Notifications;
+using Hassil.Api.Services.OpenBanking;
 using Microsoft.EntityFrameworkCore;
 using ValidationException = Hassil.Api.Exceptions.ValidationException;
 
@@ -12,13 +15,26 @@ public class AdminReviewService(
     HassilDbContext dbContext,
     IAdvanceCalculatorService calculator,
     IAiReviewService aiReviewService,
+    ILedgerService ledgerService,
+    IMockNotificationService notificationService,
+    IOpenBankingGateway openBankingGateway,
     ILogger<AdminReviewService> logger) : IAdminReviewService
 {
+    private static readonly AdvanceStatus[] AdminWorkStatuses =
+    [
+        AdvanceStatus.PendingClientConfirmation,
+        AdvanceStatus.PendingReview,
+        AdvanceStatus.Approved,
+        AdvanceStatus.Disbursed,
+        AdvanceStatus.ClientPaymentDetected,
+        AdvanceStatus.ClientPaidHassil
+    ];
+
     public async Task<IReadOnlyList<AdvanceRequest>> GetPendingAsync(
         CancellationToken ct = default)
     {
         return await AdvanceQuery()
-            .Where(a => a.Status == AdvanceStatus.PendingReview)
+            .Where(a => AdminWorkStatuses.Contains(a.Status))
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync(ct);
     }
@@ -134,6 +150,247 @@ public class AdminReviewService(
 
         await dbContext.SaveChangesAsync(ct);
 
+        return await GetDetailAsync(advance.Id, ct);
+    }
+
+    public async Task<AdminReviewDetail> SendClientConfirmationAsync(
+        Guid advanceRequestId,
+        CancellationToken ct = default)
+    {
+        var advance = await GetAdvanceForAdminAsync(advanceRequestId, ct);
+        EnsureFinancingModel(advance, FinancingModel.InvoiceFactoring);
+
+        if (advance.Invoice.ClientConfirmation is null)
+        {
+            var confirmation = notificationService.CreateClientConfirmation(advance.Invoice);
+            advance.Invoice.AttachClientConfirmation(confirmation);
+            dbContext.ClientConfirmations.Add(confirmation);
+        }
+
+        await dbContext.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Client confirmation link issued by admin. AdvanceRequestId={AdvanceRequestId} InvoiceId={InvoiceId}",
+            advance.Id,
+            advance.InvoiceId);
+
+        return await GetDetailAsync(advance.Id, ct);
+    }
+
+    public async Task<AdminReviewDetail> ApproveAndDisburseAsync(
+        Guid reviewerUserId,
+        Guid advanceRequestId,
+        string? notes,
+        CancellationToken ct = default)
+    {
+        var reviewer = await GetReviewerAsync(reviewerUserId, ct);
+        var advance = await GetAdvanceForAdminAsync(advanceRequestId, ct);
+
+        if (advance.Status == AdvanceStatus.PendingClientConfirmation)
+            throw new ConflictException(
+                "Client confirmation must be completed before admin approval and disbursement.",
+                "CLIENT_CONFIRMATION_REQUIRED");
+
+        if (advance.Status == AdvanceStatus.PendingReview)
+        {
+            RunTransition(
+                () =>
+                {
+                    advance.ApproveManually(reviewer.Id);
+                    advance.Invoice.Approve();
+                },
+                "INVALID_ADMIN_REVIEW_TRANSITION");
+
+            AddReview(
+                advance,
+                reviewer.Id,
+                AdminDecision.Approved,
+                notes ?? "Manual review completed. Approved and disbursed by admin.");
+        }
+        else if (advance.Status != AdvanceStatus.Approved)
+        {
+            throw new ConflictException(
+                $"Advance request '{advance.Id}' cannot be approved and disbursed from status '{advance.Status}'.",
+                "INVALID_ADMIN_LIFECYCLE_TRANSITION");
+        }
+        else
+        {
+            AddReview(
+                advance,
+                reviewer.Id,
+                AdminDecision.Approved,
+                notes ?? "Approved request disbursed by admin.");
+        }
+
+        await DisburseAsync(advance, ct);
+        await dbContext.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Advance request approved and disbursed by admin. AdvanceRequestId={AdvanceRequestId} ReviewerUserId={ReviewerUserId}",
+            advance.Id,
+            reviewer.Id);
+
+        return await GetDetailAsync(advance.Id, ct);
+    }
+
+    public async Task<AdminReviewDetail> SimulateDisbursementAsync(
+        Guid advanceRequestId,
+        CancellationToken ct = default)
+    {
+        var advance = await GetAdvanceForAdminAsync(advanceRequestId, ct);
+        await DisburseAsync(advance, ct);
+        await dbContext.SaveChangesAsync(ct);
+        return await GetDetailAsync(advance.Id, ct);
+    }
+
+    public async Task<AdminReviewDetail> SimulateClientPaymentDetectedAsync(
+        Guid advanceRequestId,
+        CancellationToken ct = default)
+    {
+        var advance = await GetAdvanceForAdminAsync(advanceRequestId, ct);
+        EnsureFinancingModel(advance, FinancingModel.InvoiceDiscounting);
+
+        await openBankingGateway.DetectIncomingClientPaymentToUserAsync(
+            userId:         advance.UserId,
+            invoiceId:      advance.InvoiceId,
+            expectedAmount: advance.Invoice.Amount,
+            currency:       advance.Invoice.Currency,
+            ct:             ct);
+
+        RunTransition(advance.MarkClientPaymentDetected, "INVALID_ADMIN_LIFECYCLE_TRANSITION");
+
+        ledgerService.Record(
+            userId:           advance.UserId,
+            type:             TransactionType.DetectedIncomingPayment,
+            direction:        TransactionDirection.Internal,
+            amount:           advance.Invoice.Amount,
+            invoiceId:        advance.InvoiceId,
+            advanceRequestId: advance.Id,
+            description:      $"Client payment detected for invoice {advance.Invoice.InvoiceNumber}.");
+
+        await dbContext.SaveChangesAsync(ct);
+        return await GetDetailAsync(advance.Id, ct);
+    }
+
+    public async Task<AdminReviewDetail> SimulateUserRepaymentAsync(
+        Guid advanceRequestId,
+        CancellationToken ct = default)
+    {
+        var advance = await GetAdvanceForAdminAsync(advanceRequestId, ct);
+        EnsureFinancingModel(advance, FinancingModel.InvoiceDiscounting);
+
+        await openBankingGateway.PullRepaymentFromUserAsync(
+            userId:      advance.UserId,
+            amount:      advance.ExpectedRepaymentAmount,
+            currency:    advance.Invoice.Currency,
+            description: $"Repayment for invoice {advance.Invoice.InvoiceNumber}.",
+            ct:          ct);
+
+        RunTransition(
+            () =>
+            {
+                advance.MarkRepaid();
+                advance.Invoice.MarkPaid();
+            },
+            "INVALID_ADMIN_LIFECYCLE_TRANSITION");
+
+        ledgerService.Record(
+            userId:           advance.UserId,
+            type:             TransactionType.UserRepayment,
+            direction:        TransactionDirection.Debit,
+            amount:           advance.ExpectedRepaymentAmount,
+            invoiceId:        advance.InvoiceId,
+            advanceRequestId: advance.Id,
+            description:      $"User repaid Hassil for invoice {advance.Invoice.InvoiceNumber}.");
+
+        ledgerService.Record(
+            userId:           advance.UserId,
+            type:             TransactionType.PlatformFee,
+            direction:        TransactionDirection.Internal,
+            amount:           advance.FeeAmount,
+            invoiceId:        advance.InvoiceId,
+            advanceRequestId: advance.Id,
+            description:      "Platform fee collected at repayment.");
+
+        AddTrustScoreEvent(advance.User, 10, "Advance repaid on time.");
+
+        await dbContext.SaveChangesAsync(ct);
+        return await GetDetailAsync(advance.Id, ct);
+    }
+
+    public async Task<AdminReviewDetail> SimulateClientPaymentToHassilAsync(
+        Guid advanceRequestId,
+        CancellationToken ct = default)
+    {
+        var advance = await GetAdvanceForAdminAsync(advanceRequestId, ct);
+        EnsureFinancingModel(advance, FinancingModel.InvoiceFactoring);
+
+        await openBankingGateway.ReceiveClientPaymentToHassilAsync(
+            clientId:  advance.Invoice.ClientId,
+            invoiceId: advance.InvoiceId,
+            amount:    advance.Invoice.Amount,
+            currency:  advance.Invoice.Currency,
+            ct:        ct);
+
+        RunTransition(advance.MarkClientPaidHassil, "INVALID_ADMIN_LIFECYCLE_TRANSITION");
+
+        ledgerService.Record(
+            userId:           advance.UserId,
+            type:             TransactionType.ClientPaymentToHassil,
+            direction:        TransactionDirection.Credit,
+            amount:           advance.Invoice.Amount,
+            invoiceId:        advance.InvoiceId,
+            advanceRequestId: advance.Id,
+            description:      $"Client paid Hassil for invoice {advance.Invoice.InvoiceNumber}.");
+
+        await dbContext.SaveChangesAsync(ct);
+        return await GetDetailAsync(advance.Id, ct);
+    }
+
+    public async Task<AdminReviewDetail> SimulateBufferReleaseAsync(
+        Guid advanceRequestId,
+        CancellationToken ct = default)
+    {
+        var advance = await GetAdvanceForAdminAsync(advanceRequestId, ct);
+        EnsureFinancingModel(advance, FinancingModel.InvoiceFactoring);
+
+        await openBankingGateway.ReleaseBufferToUserAsync(
+            userId:      advance.UserId,
+            amount:      advance.SettlementBufferAmount,
+            currency:    advance.Invoice.Currency,
+            description: $"Settlement buffer release for invoice {advance.Invoice.InvoiceNumber}.",
+            ct:          ct);
+
+        RunTransition(
+            () =>
+            {
+                advance.ReleaseBuffer();
+                advance.MarkRepaid();
+                advance.Invoice.MarkPaid();
+            },
+            "INVALID_ADMIN_LIFECYCLE_TRANSITION");
+
+        ledgerService.Record(
+            userId:           advance.UserId,
+            type:             TransactionType.PlatformFee,
+            direction:        TransactionDirection.Internal,
+            amount:           advance.FeeAmount,
+            invoiceId:        advance.InvoiceId,
+            advanceRequestId: advance.Id,
+            description:      "Platform fee collected from settlement.");
+
+        ledgerService.Record(
+            userId:           advance.UserId,
+            type:             TransactionType.BufferRelease,
+            direction:        TransactionDirection.Credit,
+            amount:           advance.SettlementBufferAmount,
+            invoiceId:        advance.InvoiceId,
+            advanceRequestId: advance.Id,
+            description:      $"Remaining settlement buffer released for invoice {advance.Invoice.InvoiceNumber}.");
+
+        AddTrustScoreEvent(advance.User, 10, "Factoring advance completed with buffer release.");
+
+        await dbContext.SaveChangesAsync(ct);
         return await GetDetailAsync(advance.Id, ct);
     }
 
@@ -257,6 +514,43 @@ public class AdminReviewService(
             throw new ConflictException(
                 $"Advance request '{advance.Id}' must be pending review before manual admin action.",
                 "INVALID_ADMIN_REVIEW_TRANSITION");
+    }
+
+    private async Task DisburseAsync(AdvanceRequest advance, CancellationToken ct)
+    {
+        await openBankingGateway.PushAdvanceToUserAsync(
+            userId:      advance.UserId,
+            amount:      advance.AdvanceAmount,
+            currency:    advance.Invoice.Currency,
+            description: $"Advance disbursement for invoice {advance.Invoice.InvoiceNumber}.",
+            ct:          ct);
+
+        RunTransition(
+            () =>
+            {
+                advance.Disburse();
+                advance.Invoice.MarkDisbursed();
+            },
+            "INVALID_ADMIN_LIFECYCLE_TRANSITION");
+
+        ledgerService.Record(
+            userId:           advance.UserId,
+            type:             TransactionType.AdvanceDisbursement,
+            direction:        TransactionDirection.Credit,
+            amount:           advance.AdvanceAmount,
+            invoiceId:        advance.InvoiceId,
+            advanceRequestId: advance.Id,
+            description:      $"Advance sent for invoice {advance.Invoice.InvoiceNumber}.");
+    }
+
+    private static void EnsureFinancingModel(
+        AdvanceRequest advance,
+        FinancingModel expected)
+    {
+        if (advance.FinancingModel != expected)
+            throw new ConflictException(
+                $"Advance request '{advance.Id}' uses '{advance.FinancingModel}' and cannot run this admin action.",
+                "INVALID_FINANCING_MODEL");
     }
 
     private static void RunTransition(Action transition, string code)

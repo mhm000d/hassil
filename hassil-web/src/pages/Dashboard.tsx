@@ -210,19 +210,6 @@ export default function Dashboard() {
                     <p>
                         {outstandingInvoices.count} open receivable{outstandingInvoices.count === 1 ? '' : 's'} tracked for this account.
                     </p>
-                    {/*<button*/}
-                    {/*    className="btn btn-secondary btn-sm"*/}
-                    {/*    onClick={() =>*/}
-                    {/*        firstActionInvoice*/}
-                    {/*            ? navigate(firstActionInvoice.status === 'Draft'*/}
-                    {/*                ? `/invoices/${firstActionInvoice.id}`*/}
-                    {/*                : `/invoices/${firstActionInvoice.id}/advance`)*/}
-                    {/*            : navigate('/invoices/new')*/}
-                    {/*    }*/}
-                    {/*>*/}
-                    {/*    <Icon name="advance" />*/}
-                    {/*    {firstActionInvoice ? 'Request advance' : 'Create invoice'}*/}
-                    {/*</button>*/}
                     <div className="hero-watermark">
                         <Icon name="chart" />
                     </div>

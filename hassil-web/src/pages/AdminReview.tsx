@@ -12,8 +12,6 @@ import ReviewScore from '../components/ReviewScore'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Table from '../components/Table'
 import Icon from '../components/Icon'
-import { useAuth } from '../hooks'
-import { restoreRequesterSession } from '../services'
 
 function AiReviewCard({ snapshot }: { snapshot: AiReviewSnapshot }) {
     const statusMap = { Low: 'Approved', Medium: 'PendingReview', High: 'Rejected' } as const
@@ -59,6 +57,27 @@ type DecisionResult = {
     description: string
 }
 
+type LifecycleAction = {
+    key:
+        | 'sendClientConfirmation'
+        | 'approveAndDisburse'
+        | 'simulateDisbursement'
+        | 'simulateClientPaymentDetected'
+        | 'simulateUserRepayment'
+        | 'simulateClientPaymentToHassil'
+        | 'simulateBufferRelease'
+    title: string
+    description: string
+    label: string
+    tone: 'primary' | 'success' | 'warning'
+}
+
+type ActionResult = {
+    title: string
+    description: string
+    tone: 'decision-success' | 'decision-warning' | 'decision-error'
+}
+
 function decisionCopy(decision: AdminDecision): Omit<DecisionResult, 'decision'> {
     if (decision === 'Approved') {
         return {
@@ -86,16 +105,91 @@ function aiRecommendationLabel(snapshot?: AiReviewSnapshot) {
     return snapshot.recommendedAction
 }
 
+function lifecycleActionFor(detail: AdminAdvanceRequestDetail): LifecycleAction | null {
+    const advance = detail.advanceRequest
+
+    if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'PendingClientConfirmation') {
+        return {
+            key: 'sendClientConfirmation',
+            title: 'Client confirmation',
+            description: 'Issue the secure client confirmation link before review and funding can continue.',
+            label: advance.clientConfirmationToken ? 'Send client link' : 'Create client link',
+            tone: 'warning',
+        }
+    }
+
+    if (advance.status === 'PendingReview') {
+        return {
+            key: 'approveAndDisburse',
+            title: 'Review and fund',
+            description: 'Approve the request and send the advance to the requester in one admin action.',
+            label: 'Approve and disburse',
+            tone: 'success',
+        }
+    }
+
+    if (advance.status === 'Approved') {
+        return {
+            key: 'simulateDisbursement',
+            title: 'Funding ready',
+            description: 'The request is approved. Send the advance to the requester.',
+            label: 'Disburse funds',
+            tone: 'success',
+        }
+    }
+
+    if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'Disbursed') {
+        return {
+            key: 'simulateClientPaymentToHassil',
+            title: 'Client settlement',
+            description: 'Record the client payment into the Hassil collection account.',
+            label: 'Record client payment',
+            tone: 'primary',
+        }
+    }
+
+    if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'ClientPaidHassil') {
+        return {
+            key: 'simulateBufferRelease',
+            title: 'Release remaining balance',
+            description: 'Release the remaining settlement buffer after the fixed fee is collected.',
+            label: 'Release buffer',
+            tone: 'success',
+        }
+    }
+
+    if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'Disbursed') {
+        return {
+            key: 'simulateClientPaymentDetected',
+            title: 'Client payment received',
+            description: 'Record that the requester received the client payment.',
+            label: 'Mark client payment received',
+            tone: 'primary',
+        }
+    }
+
+    if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'ClientPaymentDetected') {
+        return {
+            key: 'simulateUserRepayment',
+            title: 'Collect repayment',
+            description: 'Collect the advance plus the fixed fee from the requester.',
+            label: 'Collect repayment',
+            tone: 'success',
+        }
+    }
+
+    return null
+}
+
 export default function AdminReview() {
     const { advanceId } = useParams<{ advanceId?: string }>()
     const navigate = useNavigate()
-    const { login, me } = useAuth()
     const [pendingAdvances, setPendingAdvances] = useState<AdvanceRequest[]>([])
     const [detail, setDetail] = useState<AdminAdvanceRequestDetail | null>(null)
     const [filter, setFilter] = useState('Needs action')
     const [reviewNote, setReviewNote] = useState('Manual review completed.')
     const [decisionResult, setDecisionResult] = useState<DecisionResult | null>(null)
-    const [returningToRequester, setReturningToRequester] = useState(false)
+    const [actionResult, setActionResult] = useState<ActionResult | null>(null)
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -106,7 +200,7 @@ export default function AdminReview() {
             setError(null)
             setDetail(null)
             setDecisionResult(null)
-            setReturningToRequester(false)
+            setActionResult(null)
             const data = await AdminService.listPending()
             setPendingAdvances(data)
         } catch (err: any) {
@@ -121,7 +215,7 @@ export default function AdminReview() {
             setLoading(true)
             setError(null)
             setDecisionResult(null)
-            setReturningToRequester(false)
+            setActionResult(null)
             setReviewNote('Manual review completed.')
             const data = await AdminService.getDetail(id)
             setDetail(data)
@@ -161,36 +255,12 @@ export default function AdminReview() {
             const copy = decisionCopy(decision)
             setDetail(updated)
             setDecisionResult({ decision, ...copy })
+            setActionResult(null)
             setPendingAdvances((current) => current.filter((advance) => advance.id !== detail.advanceRequest.id))
         } catch (err: any) {
             setError(err.message || 'Could not submit admin decision')
         } finally {
             setActionLoading(false)
-        }
-    }
-
-    const continueAsRequester = async () => {
-        if (!detail || returningToRequester) return
-
-        const persona = detail.advanceRequest.financingModel === 'InvoiceDiscounting'
-            ? 'freelancer'
-            : 'small_business'
-
-        try {
-            setReturningToRequester(true)
-            setError(null)
-
-            if (restoreRequesterSession()) {
-                await me()
-            } else {
-                await login({ persona })
-            }
-
-            navigate(`/advances/${detail.advanceRequest.id}`)
-        } catch (err: any) {
-            setError(err.message || 'Could not switch back to the requester workspace')
-        } finally {
-            setReturningToRequester(false)
         }
     }
 
@@ -204,6 +274,56 @@ export default function AdminReview() {
             setDetail(updated)
         } catch (err: any) {
             setError(err.message || 'Could not generate AI review')
+        } finally {
+            setActionLoading(false)
+        }
+    }
+
+    const runLifecycleAction = async (action: LifecycleAction) => {
+        if (!detail || actionLoading) return
+
+        try {
+            setActionLoading(true)
+            setError(null)
+            setDecisionResult(null)
+
+            const note = reviewNote.trim()
+            let updated: AdminAdvanceRequestDetail
+
+            if (action.key === 'sendClientConfirmation') {
+                updated = await AdminService.sendClientConfirmation(detail.advanceRequest.id)
+            } else if (action.key === 'approveAndDisburse') {
+                updated = await AdminService.approveAndDisburse(
+                    detail.advanceRequest.id,
+                    note || 'Manual review completed. Approved and disbursed by admin.',
+                )
+            } else if (action.key === 'simulateDisbursement') {
+                updated = await AdminService.simulateDisbursement(detail.advanceRequest.id)
+            } else if (action.key === 'simulateClientPaymentDetected') {
+                updated = await AdminService.simulateClientPaymentDetected(detail.advanceRequest.id)
+            } else if (action.key === 'simulateUserRepayment') {
+                updated = await AdminService.simulateUserRepayment(detail.advanceRequest.id)
+            } else if (action.key === 'simulateClientPaymentToHassil') {
+                updated = await AdminService.simulateClientPaymentToHassil(detail.advanceRequest.id)
+            } else {
+                updated = await AdminService.simulateBufferRelease(detail.advanceRequest.id)
+            }
+
+            setDetail(updated)
+            setActionResult({
+                title: action.key === 'sendClientConfirmation' ? 'Client link ready' : 'Lifecycle updated',
+                description: action.key === 'sendClientConfirmation'
+                    ? 'The confirmation link is ready to send or open for the client response.'
+                    : 'The advance has moved to the next operational step.',
+                tone: 'decision-success',
+            })
+        } catch (err: any) {
+            setError(err.message || 'Could not move the request to the next step')
+            setActionResult({
+                title: 'Action blocked',
+                description: err.message || 'Could not move the request to the next step.',
+                tone: 'decision-error',
+            })
         } finally {
             setActionLoading(false)
         }
@@ -241,31 +361,30 @@ export default function AdminReview() {
         const invoice = detail.invoice
         const flags = checklistFlags(detail)
         const canDecide = selected.status === 'PendingReview' && !decisionResult
+        const lifecycleAction = lifecycleActionFor(detail)
         const clientConfirmation = selected.clientConfirmationStatus
             ?? (selected.clientNotificationRequired ? 'Pending' : 'Not required')
-        const decisionTone = decisionResult?.decision === 'Approved'
+        const decisionTone = actionResult?.tone ?? (decisionResult?.decision === 'Approved'
             ? 'decision-success'
             : decisionResult?.decision === 'Rejected'
                 ? 'decision-error'
-                : 'decision-warning'
-        const requesterWorkspaceLabel = selected.financingModel === 'InvoiceDiscounting'
-            ? 'freelancer workspace'
-            : 'business workspace'
+                : 'decision-warning')
+        const deskTitle = actionResult?.title ?? (decisionResult ? decisionResult.title : 'Ready for admin action')
+        const deskDescription = actionResult?.description
+            ?? (decisionResult
+                ? decisionResult.description
+                : 'Use the confirmation status, score, checklist, and invoice details before funding or asking for more information.')
 
         return (
             <>
                 <Breadcrumbs items={[{ label: 'Admin review', onClick: () => navigate('/admin') }, { label: invoice.invoiceNumber }]} />
                 <PageHeading title="Admin review detail" description="Review invoice details, checklist results, score, and recommended action." />
                 {error && <p className="error-text mb-18">{error}</p>}
-                <div className={`admin-decision-desk ${decisionResult ? decisionTone : ''}`}>
+                <div className={`admin-decision-desk ${decisionResult || actionResult ? decisionTone : ''}`}>
                     <div className="admin-decision-copy">
                         <span className="small-label">Decision desk</span>
-                        <h2>{decisionResult ? decisionResult.title : 'Ready for reviewer decision'}</h2>
-                        <p>
-                            {decisionResult
-                                ? decisionResult.description
-                                : 'Use the confirmation status, score, checklist, and invoice details before approving or asking for more information.'}
-                        </p>
+                        <h2>{deskTitle}</h2>
+                        <p>{deskDescription}</p>
                     </div>
                     <div className="admin-decision-facts">
                         <div>
@@ -287,17 +406,37 @@ export default function AdminReview() {
                     </div>
                     {decisionResult ? (
                         <div className="admin-decision-complete">
-                            {decisionResult.decision === 'Approved' && (
-                                <button className="btn btn-primary" onClick={continueAsRequester} disabled={returningToRequester}>
-                                    <Icon name="advance" /> {returningToRequester ? 'Opening request...' : `Continue in ${requesterWorkspaceLabel}`}
-                                </button>
-                            )}
                             <button className="btn btn-secondary" onClick={() => navigate('/admin')}>
                                 <Icon name="back" /> Back to review queue
                             </button>
                         </div>
                     ) : (
                         <>
+                            {lifecycleAction && (
+                                <div className={`admin-lifecycle-action ${lifecycleAction.tone}`}>
+                                    <div>
+                                        <span className="small-label">{lifecycleAction.title}</span>
+                                        <p>{lifecycleAction.description}</p>
+                                    </div>
+                                    <button
+                                        className={`btn ${lifecycleAction.tone === 'warning' ? 'btn-primary' : 'btn-success'}`}
+                                        onClick={() => runLifecycleAction(lifecycleAction)}
+                                        disabled={actionLoading}
+                                    >
+                                        <Icon name={lifecycleAction.key === 'sendClientConfirmation' ? 'link' : 'advance'} />
+                                        {actionLoading ? 'Updating...' : lifecycleAction.label}
+                                    </button>
+                                </div>
+                            )}
+                            {selected.financingModel === 'InvoiceFactoring' && selected.clientConfirmationToken && (
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => navigate(`/client/confirm/${selected.clientConfirmationToken}`)}
+                                    disabled={actionLoading}
+                                >
+                                    <Icon name="open" /> Open client confirmation
+                                </button>
+                            )}
                             <div className="form-group admin-review-note">
                                 <label>Reviewer note</label>
                                 <textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} />
@@ -308,9 +447,6 @@ export default function AdminReview() {
                                 </button>
                                 <button className="btn btn-secondary" onClick={() => doDecision('RequestMoreInfo')} disabled={!canDecide || actionLoading}>
                                     <Icon name="invoice" /> Request more info
-                                </button>
-                                <button className="btn btn-success" onClick={() => doDecision('Approved')} disabled={!canDecide || actionLoading}>
-                                    <Icon name="check" /> Approve
                                 </button>
                             </div>
                         </>
@@ -401,16 +537,16 @@ export default function AdminReview() {
 
     return (
         <>
-            <PageHeading title="Admin review" description="Review advance requests waiting for manual decision." />
+            <PageHeading title="Admin review" description="Manage confirmation, approval, funding, and settlement for active advance requests." />
             <div className="invoice-command-grid admin-command-grid">
                 <button
                     type="button"
                     className={`invoice-command-card admin-command-card ${filter === 'Needs action' ? 'active' : ''}`}
                     onClick={() => setFilter('Needs action')}
                 >
-                    <span>Manual queue</span>
+                    <span>Operations queue</span>
                     <strong>{queueStats.total}</strong>
-                    <p>Requests waiting for a reviewer decision.</p>
+                    <p>Requests that need confirmation, review, funding, or settlement.</p>
                 </button>
                 <button
                     type="button"
@@ -428,7 +564,7 @@ export default function AdminReview() {
                 >
                     <span>SMB factoring</span>
                     <strong>{queueStats.factoring}</strong>
-                    <p>Client-confirmed invoices paid through Hassil.</p>
+                    <p>Client confirmation and collection through Hassil.</p>
                 </button>
                 <button
                     type="button"
@@ -457,8 +593,8 @@ export default function AdminReview() {
                 </div>
                 <Table
                     headers={['Invoice', 'Model', 'Advance', 'Fee', 'Score', 'Status', 'Action']}
-                    emptyTitle={loading ? 'Loading reviews' : 'No reviews waiting'}
-                    emptyDescription={loading ? 'Fetching pending review requests.' : 'Pending manual review requests will appear here.'}
+                    emptyTitle={loading ? 'Loading admin queue' : 'No active operations'}
+                    emptyDescription={loading ? 'Fetching active advance requests.' : 'Requests that need admin action will appear here.'}
                     rows={queue.map((advance) => [
                         <div className="admin-invoice-cell" key="invoice">
                             <strong>{advance.invoiceNumber ?? advance.invoiceId}</strong>

@@ -82,11 +82,6 @@ public static class ApiEndpoints
         public const string Create = Base;
         public const string GetAll = Base;
         public const string Get = $"{Base}/{{id:guid}}";
-        public const string SimulateDisbursement = $"{Base}/{{id:guid}}/simulate-disbursement";
-        public const string SimulateClientPaymentDetected = $"{Base}/{{id:guid}}/simulate-client-payment-detected";
-        public const string SimulateUserRepayment = $"{Base}/{{id:guid}}/simulate-user-repayment";
-        public const string SimulateClientPaymentToHassil = $"{Base}/{{id:guid}}/simulate-client-payment-to-hassil";
-        public const string SimulateBufferRelease = $"{Base}/{{id:guid}}/simulate-buffer-release";
     }
 
     // -- Client Confirmation Endpoints ---------------------------------------
@@ -110,5 +105,12 @@ public static class ApiEndpoints
         public const string RejectAdvanceRequest = $"{AdvanceBase}/{{id:guid}}/reject";
         public const string RequestMoreInfo = $"{AdvanceBase}/{{id:guid}}/request-more-info";
         public const string GenerateAiReview = $"{AdvanceBase}/{{id:guid}}/ai-review";
+        public const string SendClientConfirmation = $"{AdvanceBase}/{{id:guid}}/send-client-confirmation";
+        public const string ApproveAndDisburse = $"{AdvanceBase}/{{id:guid}}/approve-and-disburse";
+        public const string SimulateDisbursement = $"{AdvanceBase}/{{id:guid}}/simulate-disbursement";
+        public const string SimulateClientPaymentDetected = $"{AdvanceBase}/{{id:guid}}/simulate-client-payment-detected";
+        public const string SimulateUserRepayment = $"{AdvanceBase}/{{id:guid}}/simulate-user-repayment";
+        public const string SimulateClientPaymentToHassil = $"{AdvanceBase}/{{id:guid}}/simulate-client-payment-to-hassil";
+        public const string SimulateBufferRelease = $"{AdvanceBase}/{{id:guid}}/simulate-buffer-release";
     }
 }

@@ -43,41 +43,6 @@ public class AdvanceRequestsController(IAdvanceRequestService advanceRequestServ
         return Ok(advanceRequest.ToResponse());
     }
 
-    [HttpPost(ApiEndpoints.AdvanceRequests.SimulateDisbursement)]
-    public async Task<IActionResult> SimulateDisbursement(Guid id, CancellationToken ct)
-    {
-        var advanceRequest = await advanceRequestService.SimulateDisbursementAsync(GetUserId(), id, ct);
-        return Ok(advanceRequest.ToResponse());
-    }
-
-    [HttpPost(ApiEndpoints.AdvanceRequests.SimulateClientPaymentDetected)]
-    public async Task<IActionResult> SimulateClientPaymentDetected(Guid id, CancellationToken ct)
-    {
-        var advanceRequest = await advanceRequestService.SimulateClientPaymentDetectedAsync(GetUserId(), id, ct);
-        return Ok(advanceRequest.ToResponse());
-    }
-
-    [HttpPost(ApiEndpoints.AdvanceRequests.SimulateUserRepayment)]
-    public async Task<IActionResult> SimulateUserRepayment(Guid id, CancellationToken ct)
-    {
-        var advanceRequest = await advanceRequestService.SimulateUserRepaymentAsync(GetUserId(), id, ct);
-        return Ok(advanceRequest.ToResponse());
-    }
-
-    [HttpPost(ApiEndpoints.AdvanceRequests.SimulateClientPaymentToHassil)]
-    public async Task<IActionResult> SimulateClientPaymentToHassil(Guid id, CancellationToken ct)
-    {
-        var advanceRequest = await advanceRequestService.SimulateClientPaymentToHassilAsync(GetUserId(), id, ct);
-        return Ok(advanceRequest.ToResponse());
-    }
-
-    [HttpPost(ApiEndpoints.AdvanceRequests.SimulateBufferRelease)]
-    public async Task<IActionResult> SimulateBufferRelease(Guid id, CancellationToken ct)
-    {
-        var advanceRequest = await advanceRequestService.SimulateBufferReleaseAsync(GetUserId(), id, ct);
-        return Ok(advanceRequest.ToResponse());
-    }
-
     private Guid GetUserId() =>
         Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 }

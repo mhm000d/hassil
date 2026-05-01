@@ -7,6 +7,7 @@ public static class InvoiceMappings
 {
     public static InvoiceSummaryResponse ToSummaryResponse(this Invoice invoice) => new(
         Id:               invoice.Id,
+        UserId:           invoice.UserId,
         InvoiceNumber:    invoice.InvoiceNumber,
         Client:           invoice.Client.ToResponse(),
         ReceivableSource: invoice.ReceivableSource.ToString(),

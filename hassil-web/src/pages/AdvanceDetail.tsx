@@ -5,7 +5,6 @@ import {
     formatCurrency,
     formatDate,
     getModelLabel,
-    getNextSimulationLabel,
 } from '../utils/formatters'
 import { useInvoices, useAdvances, useTransactions } from '../hooks'
 import PageHeading from '../components/PageHeading'
@@ -35,8 +34,8 @@ function getAdvanceNextStep(advance: AdvanceRequest) {
         return {
             tone: 'warning',
             title: 'Client confirmation needed',
-            description: 'The client needs to confirm the invoice before Hassil can finish review.',
-            primaryLabel: 'Open client link',
+            description: 'Hassil operations will issue and track the client confirmation before review continues.',
+            actionLabel: 'Admin action pending',
         }
     }
 
@@ -45,7 +44,7 @@ function getAdvanceNextStep(advance: AdvanceRequest) {
             tone: 'primary',
             title: 'Waiting for review',
             description: 'Hassil is checking invoice details, repayment path, and trust score.',
-            primaryLabel: null,
+            actionLabel: 'Under review',
         }
     }
 
@@ -53,8 +52,8 @@ function getAdvanceNextStep(advance: AdvanceRequest) {
         return {
             tone: 'success',
             title: 'Approved for funding',
-            description: 'The request is approved. Move it to funding when you want to demo disbursement.',
-            primaryLabel: 'Simulate disbursement',
+            description: 'The request is approved. Hassil operations will disburse the advance.',
+            actionLabel: 'Funding pending',
         }
     }
 
@@ -62,8 +61,8 @@ function getAdvanceNextStep(advance: AdvanceRequest) {
         return {
             tone: 'primary',
             title: 'Waiting for client payment',
-            description: 'The client pays Hassil on the invoice due date, then the remaining buffer is released.',
-            primaryLabel: 'Simulate client payment',
+            description: 'The client pays Hassil on the invoice due date, then operations releases the remaining buffer.',
+            actionLabel: 'Collection pending',
         }
     }
 
@@ -71,8 +70,8 @@ function getAdvanceNextStep(advance: AdvanceRequest) {
         return {
             tone: 'success',
             title: 'Release settlement buffer',
-            description: 'Hassil has collected repayment. Release the remaining balance after the fee.',
-            primaryLabel: 'Simulate buffer release',
+            description: 'Hassil has collected repayment. Operations will release the remaining balance after the fee.',
+            actionLabel: 'Buffer release pending',
         }
     }
 
@@ -80,8 +79,8 @@ function getAdvanceNextStep(advance: AdvanceRequest) {
         return {
             tone: 'primary',
             title: 'Waiting for client payment to user',
-            description: 'The client relationship stays private. Hassil waits for the user to receive payment.',
-            primaryLabel: 'Simulate payment detection',
+            description: 'The client relationship stays private. Hassil waits to detect that payment was received.',
+            actionLabel: 'Payment detection pending',
         }
     }
 
@@ -89,8 +88,8 @@ function getAdvanceNextStep(advance: AdvanceRequest) {
         return {
             tone: 'success',
             title: 'Repay Hassil',
-            description: 'The client payment was detected. Repay the advance plus the fixed fee.',
-            primaryLabel: 'Simulate repayment',
+            description: 'The client payment was detected. Operations will collect the advance plus the fixed fee.',
+            actionLabel: 'Repayment pending',
         }
     }
 
@@ -99,7 +98,7 @@ function getAdvanceNextStep(advance: AdvanceRequest) {
             tone: 'warning',
             title: 'Request rejected',
             description: advance.rejectionReason ?? 'Review the decision and create a stronger invoice request.',
-            primaryLabel: null,
+            actionLabel: null,
         }
     }
 
@@ -107,28 +106,20 @@ function getAdvanceNextStep(advance: AdvanceRequest) {
         tone: 'success',
         title: 'Advance settled',
         description: 'The funding lifecycle is complete. Review the ledger for the final movement.',
-        primaryLabel: null,
+        actionLabel: null,
     }
 }
 
 export default function AdvanceDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { get: getInvoice, refetch: refetchInvoices } = useInvoices()
-    const {
-        get: getAdvance,
-        simulateDisbursement,
-        simulateClientPaymentDetected,
-        simulateUserRepayment,
-        simulateClientPaymentToHassil,
-        simulateBufferRelease,
-    } = useAdvances()
-    const { transactions: allTransactions, refetch: refetchTransactions } = useTransactions()
+    const { get: getInvoice } = useInvoices()
+    const { get: getAdvance } = useAdvances()
+    const { transactions: allTransactions } = useTransactions()
 
     const [advance, setAdvance] = useState<AdvanceRequest | null>(null)
     const [invoice, setInvoice] = useState<Invoice | null>(null)
     const [loading, setLoading] = useState(true)
-    const [simulating, setSimulating] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const load = async () => {
@@ -156,40 +147,6 @@ export default function AdvanceDetail() {
         load()
     }, [id])
 
-    const simulate = async () => {
-        if (!advance || simulating) return
-
-        try {
-            setSimulating(true)
-            setError(null)
-
-            let updated: AdvanceRequest | undefined
-
-            if (advance.status === 'Approved') {
-                updated = await simulateDisbursement(advance.id)
-            } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'Disbursed') {
-                updated = await simulateClientPaymentToHassil(advance.id)
-            } else if (advance.financingModel === 'InvoiceFactoring' && advance.status === 'ClientPaidHassil') {
-                updated = await simulateBufferRelease(advance.id)
-            } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'Disbursed') {
-                updated = await simulateClientPaymentDetected(advance.id)
-            } else if (advance.financingModel === 'InvoiceDiscounting' && advance.status === 'ClientPaymentDetected') {
-                updated = await simulateUserRepayment(advance.id)
-            }
-
-            if (!updated) return
-
-            setAdvance(updated)
-            const invData = await getInvoice(updated.invoiceId)
-            if (invData) setInvoice(invData)
-            await Promise.all([refetchInvoices(), refetchTransactions()])
-        } catch (err: any) {
-            setError(err.message || 'Failed to move advance to the next step')
-        } finally {
-            setSimulating(false)
-        }
-    }
-
     if (loading) {
         return (
             <div className="card">
@@ -209,13 +166,10 @@ export default function AdvanceDetail() {
         )
     }
 
-    const nextLabel = getNextSimulationLabel(advance.status, advance.financingModel)
     const transactions = advance.transactions && advance.transactions.length > 0
         ? advance.transactions
         : allTransactions.filter((tx) => tx.advanceRequestId === id)
-    const confirmationToken = advance.clientConfirmationToken
     const nextStep = getAdvanceNextStep(advance)
-    const primaryActionLabel = nextLabel ?? nextStep.primaryLabel
 
     return (
         <>
@@ -235,13 +189,9 @@ export default function AdvanceDetail() {
                 </div>
                 <div className="advance-workflow-actions">
                     <StatusBadge status={advance.status} />
-                    {advance.status === 'PendingClientConfirmation' && confirmationToken ? (
-                        <button className="btn btn-primary" onClick={() => navigate(`/client/confirm/${confirmationToken}`)}>
-                            <Icon name="link" /> Open client link
-                        </button>
-                    ) : primaryActionLabel ? (
-                        <button className="btn btn-sim" onClick={simulate} disabled={simulating}>
-                            <Icon name="next" /> {simulating ? 'Updating...' : primaryActionLabel}
+                    {nextStep.actionLabel ? (
+                        <button className="btn btn-secondary" disabled>
+                            <Icon name="review" /> {nextStep.actionLabel}
                         </button>
                     ) : (
                         <button className="btn btn-secondary" onClick={() => navigate('/ledger')}>
@@ -288,15 +238,7 @@ export default function AdvanceDetail() {
 
                     {advance.status === 'PendingClientConfirmation' && (
                         <div className="quote-disclaimer mt-16">
-                            Client confirmation is required before this request can move to review or funding.
-                            {confirmationToken && (
-                                <button
-                                    className="btn btn-secondary btn-sm ml-auto"
-                                    onClick={() => navigate(`/client/confirm/${confirmationToken}`)}
-                                >
-                                    <Icon name="open" /> Open client link
-                                </button>
-                            )}
+                            Client confirmation is required before this request can move to review or funding. Hassil operations will send and track the confirmation link.
                         </div>
                     )}
 

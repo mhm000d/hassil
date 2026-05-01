@@ -39,6 +39,7 @@ interface ApiClient {
 
 interface ApiInvoiceSummaryResponse {
     id: string
+    userId: string
     invoiceNumber: string
     client: ApiClient
     receivableSource: string
@@ -89,7 +90,7 @@ interface ApiAdminAdvanceRequestDetailResponse {
 function mapInvoiceSummary(response: ApiInvoiceSummaryResponse): Invoice {
     return {
         id: response.id,
-        userId: '',
+        userId: response.userId,
         clientId: response.client.id,
         client: response.client,
         invoiceNumber: response.invoiceNumber,
@@ -172,6 +173,21 @@ export const AdminService = {
         return mapDetail(response)
     },
 
+    sendClientConfirmation: async (id: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/send-client-confirmation`,
+        )
+        return mapDetail(response)
+    },
+
+    approveAndDisburse: async (id: string, notes?: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/approve-and-disburse`,
+            { notes },
+        )
+        return mapDetail(response)
+    },
+
     reject: async (id: string, reason: string) => {
         const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
             `${adminAdvancePath(id)}/reject`,
@@ -191,6 +207,41 @@ export const AdminService = {
     generateAiReview: async (id: string) => {
         const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
             `${adminAdvancePath(id)}/ai-review`,
+        )
+        return mapDetail(response)
+    },
+
+    simulateDisbursement: async (id: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/simulate-disbursement`,
+        )
+        return mapDetail(response)
+    },
+
+    simulateClientPaymentDetected: async (id: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/simulate-client-payment-detected`,
+        )
+        return mapDetail(response)
+    },
+
+    simulateUserRepayment: async (id: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/simulate-user-repayment`,
+        )
+        return mapDetail(response)
+    },
+
+    simulateClientPaymentToHassil: async (id: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/simulate-client-payment-to-hassil`,
+        )
+        return mapDetail(response)
+    },
+
+    simulateBufferRelease: async (id: string) => {
+        const response = await api.post<ApiAdminAdvanceRequestDetailResponse>(
+            `${adminAdvancePath(id)}/simulate-buffer-release`,
         )
         return mapDetail(response)
     },

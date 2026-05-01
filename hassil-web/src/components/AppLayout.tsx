@@ -47,7 +47,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         { path: '/ledger', label: 'Ledger', icon: 'ledger' as const },
         { path: '/admin', label: 'Admin', icon: 'admin' as const },
         ...(authUser?.accountType === 'SmallBusiness'
-            ? [{ path: '/client/confirm', label: 'Client Link', icon: 'link' as const }]
+            ? [/*{ path: '/client/confirm', label: 'Client Link', icon: 'link' as const }*/]
             : []),
     ]
 
@@ -125,11 +125,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     })}
                 </nav>
                 <div className="rail-footer">
-                    {!isAdminPath && (
-                        <button className="rail-link" onClick={() => navigate('/ledger')}>
-                            <Icon name="ledger" /> Support trail
-                        </button>
-                    )}
+                    {/*{!isAdminPath && (*/}
+                    {/*    <button className="rail-link" onClick={() => navigate('/ledger')}>*/}
+                    {/*        <Icon name="ledger" /> Support trail*/}
+                    {/*    </button>*/}
+                    {/*)}*/}
                     <button className="btn btn-secondary full-width" onClick={() => { logout(); navigate('/') }}>
                         <Icon name="open" /> Logout
                     </button>

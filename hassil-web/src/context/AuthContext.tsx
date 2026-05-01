@@ -131,12 +131,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const tokens = getStoredTokens()
             if (tokens?.accessToken || tokens?.access_token) {
                 setAuthStatus(AuthStatus.LOGGED_IN)
-                await me()
+                try {
+                    await me()
+                } catch (err) {
+                    console.error('Failed to initialize user from stored tokens:', err)
+                    clearAuthState()
+                }
             }
             setIsInitialized(true)
         }
         init()
-    }, [me])
+    }, [me, clearAuthState])
 
     return (
         <AuthContext.Provider value={{

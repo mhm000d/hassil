@@ -215,13 +215,13 @@ export default function InvoiceDetail() {
 
         if (quote && !quote.isEligible) {
             return {
-                tone: 'warning',
-                title: 'Not eligible yet',
-                hint: quote.eligibilityMessages[0] ?? 'Resolve the eligibility checks before requesting an advance.',
-                label: 'Request unavailable',
-                icon: 'review' as const,
-                disabled: true,
-                onClick: () => undefined,
+                tone: 'primary',
+                title: 'Adjust advance amount',
+                hint: quote.eligibilityMessages[0] ?? 'Try a lower requested advance amount on the quote page.',
+                label: 'Adjust quote',
+                icon: 'advance' as const,
+                disabled: false,
+                onClick: () => navigate(`/invoices/${invoice.id}/advance`),
             }
         }
 
