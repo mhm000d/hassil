@@ -189,15 +189,15 @@ export default function AdvanceDetail() {
                 </div>
                 <div className="advance-workflow-actions">
                     <StatusBadge status={advance.status} />
-                    {nextStep.actionLabel ? (
-                        <button className="btn btn-secondary" disabled>
-                            <Icon name="review" /> {nextStep.actionLabel}
-                        </button>
-                    ) : (
-                        <button className="btn btn-secondary" onClick={() => navigate('/ledger')}>
-                            <Icon name="ledger" /> Open ledger
-                        </button>
-                    )}
+                    {/*{nextStep.actionLabel ? (*/}
+                    {/*    <button className="btn btn-secondary" disabled>*/}
+                    {/*        <Icon name="review" /> {nextStep.actionLabel}*/}
+                    {/*    </button>*/}
+                    {/*) : (*/}
+                    {/*    <button className="btn btn-secondary" onClick={() => navigate('/ledger')}>*/}
+                    {/*        <Icon name="ledger" /> Open ledger*/}
+                    {/*    </button>*/}
+                    {/*)}*/}
                 </div>
             </section>
             <LifecycleStepper status={advance.status} model={advance.financingModel} />
@@ -211,7 +211,7 @@ export default function AdvanceDetail() {
                     <div className="card-header">
                         <div>
                             <h2 className="card-title">Repayment path</h2>
-                            <ModelBadge model={advance.financingModel} />
+                            {/*<ModelBadge model={advance.financingModel} />*/}
                         </div>
                         <StatusBadge status={advance.status} />
                     </div>

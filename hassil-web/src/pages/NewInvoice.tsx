@@ -347,10 +347,10 @@ export default function NewInvoice() {
                         <label>Description</label>
                         <textarea value={form.description} onChange={(e) => updateForm({ description: e.target.value })} />
                     </div>
-                    <label className="checkbox-row mb-18">
-                        <input type="checkbox" checked={form.hasEvidence} onChange={(e) => updateForm({ hasEvidence: e.target.checked })} />
-                        <span>Attach evidence file (optional).</span>
-                    </label>
+                    {/*<label className="checkbox-row mb-18">*/}
+                    {/*    <input type="checkbox" checked={form.hasEvidence} onChange={(e) => updateForm({ hasEvidence: e.target.checked })} />*/}
+                    {/*    <span>Attach evidence file (optional).</span>*/}
+                    {/*</label>*/}
                     {(errors.length > 0 || warnings.length > 0 || submitError) && (
                         <div className="feedback-list mb-18">
                             {submitError && <div className="feedback-item error">{submitError}</div>}
@@ -414,8 +414,7 @@ export default function NewInvoice() {
             )}
 
             {step === 3 && (
-                <div className="grid-2 wide-left">
-                    <div>
+                <>
                         <div className="quote-box quote-box-highlight">
                             <div className="card-header">
                                 <h2 className="card-title">Advance proposal</h2>
@@ -475,9 +474,9 @@ export default function NewInvoice() {
                                 <span>I accept the advance terms shown above.</span>
                             </label>
                             <div className="form-actions mt-16">
-                                <button type="button" className="btn btn-secondary" onClick={() => setStep(2)}>
-                                    Back to summary
-                                </button>
+                                {/*<button type="button" className="btn btn-secondary" onClick={() => setStep(2)}>*/}
+                                {/*    Back to summary*/}
+                                {/*</button>*/}
                                 <button type="button" className="btn btn-ghost" onClick={goToDetails}>
                                     Edit invoice details
                                 </button>
@@ -486,24 +485,7 @@ export default function NewInvoice() {
                                 </button>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="card card-gold">
-                        <h2 className="card-title">Eligibility checks</h2>
-                        <div className="verification-list mt-16">
-                            {[
-                                `Requested advance is within ${formatCurrency(maxAllowedAdvance, form.currency)} limit.`,
-                                `Due date is within ${dueDays} day${dueDays === 1 ? '' : 's'}.`,
-                                form.hasEvidence ? 'Optional evidence will be attached.' : 'Optional evidence skipped.',
-                            ].map((item) => (
-                                <div key={item} className="verification-item ok">
-                                    <span>OK</span>
-                                    <p>{item}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+                </>
             )}
         </>
     )

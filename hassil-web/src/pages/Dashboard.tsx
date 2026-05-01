@@ -124,13 +124,11 @@ export default function Dashboard() {
         ...(pendingClientAdvances.length > 0 ? [{
             title: 'Waiting on client confirmation',
             description: 'Factoring requests need client approval before review completes.',
-            label: pendingClientAdvances[0].clientConfirmationToken ? 'Open link' : 'Track',
-            icon: 'link' as IconName,
+            label: 'Track',
+            icon: 'review' as IconName,
             tone: 'warning' as const,
             count: pendingClientAdvances.length,
-            onClick: () => navigate(pendingClientAdvances[0].clientConfirmationToken
-                ? `/client/confirm/${pendingClientAdvances[0].clientConfirmationToken}`
-                : `/advances/${pendingClientAdvances[0].id}`),
+            onClick: () => navigate(`/advances/${pendingClientAdvances[0].id}`),
         }] : []),
         ...(approvedAdvances.length > 0 ? [{
             title: 'Approved advances ready',
@@ -186,22 +184,22 @@ export default function Dashboard() {
 
             {summaryError && <p className="error-text mb-18">{summaryError}</p>}
 
-            <section className="dashboard-action-hub">
-                <div className="dashboard-action-header">
-                    <div>
-                        <span>Action hub</span>
-                        <h2>Today&apos;s priorities</h2>
-                    </div>
-                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/invoices')}>
-                        Open invoice center
-                    </button>
-                </div>
-                <div className="dashboard-priority-grid">
-                    {visiblePriorityActions.map((action) => (
-                        <PriorityCard key={action.title} action={action} />
-                    ))}
-                </div>
-            </section>
+            {/*<section className="dashboard-action-hub">*/}
+            {/*    <div className="dashboard-action-header">*/}
+            {/*        <div>*/}
+            {/*            <span>Action hub</span>*/}
+            {/*            <h2>Today&apos;s priorities</h2>*/}
+            {/*        </div>*/}
+            {/*        <button className="btn btn-secondary btn-sm" onClick={() => navigate('/invoices')}>*/}
+            {/*            Open invoice center*/}
+            {/*        </button>*/}
+            {/*    </div>*/}
+            {/*    <div className="dashboard-priority-grid">*/}
+            {/*        {visiblePriorityActions.map((action) => (*/}
+            {/*            <PriorityCard key={action.title} action={action} />*/}
+            {/*        ))}*/}
+            {/*    </div>*/}
+            {/*</section>*/}
 
             <section className="dashboard-hero">
                 <div className="hero-main-card">
@@ -218,7 +216,7 @@ export default function Dashboard() {
                     <span>Active advances</span>
                     <strong>{formatCurrency(activeAdvances.amount)}</strong>
                     <div className="mini-progress">
-                        <i style={{ width: `${Math.min(100, activeAdvances.count * 32)}%` }} />
+                        <i style={{ width: `${outstandingInvoices.amount > 0 ? Math.min(100, Math.round((activeAdvances.amount / outstandingInvoices.amount) * 100)) : 0}%` }} />
                     </div>
                     <p>
                         {activeAdvances.count} active request{activeAdvances.count === 1 ? '' : 's'}, {reviewStates.approvedReadyForDisbursement} ready for funding
@@ -228,11 +226,24 @@ export default function Dashboard() {
                     <span>Ledger balance</span>
                     <strong>{formatCurrency(summary?.ledgerBalance ?? 0)}</strong>
                     <div className="mini-bars" aria-hidden="true">
-                        <i style={{ height: '34%' }} />
-                        <i style={{ height: '54%' }} />
-                        <i style={{ height: '78%' }} />
-                        <i style={{ height: '48%' }} />
-                        <i style={{ height: '92%' }} />
+                        {recentTx.length > 0 ? (
+                            Array.from({ length: 5 }).map((_, i) => {
+                                if (i < recentTx.length) {
+                                    const maxTx = Math.max(...recentTx.map(t => t.amount), 1)
+                                    const height = Math.max(10, Math.round((recentTx[i].amount / maxTx) * 100))
+                                    return <i key={i} style={{ height: `${height}%` }} />
+                                }
+                                return <i key={i} style={{ height: '0%' }} />
+                            })
+                        ) : (
+                            <>
+                                <i style={{ height: '34%' }} />
+                                <i style={{ height: '54%' }} />
+                                <i style={{ height: '78%' }} />
+                                <i style={{ height: '48%' }} />
+                                <i style={{ height: '92%' }} />
+                            </>
+                        )}
                     </div>
                     <p>{formatCurrency(expectedRepayments.amount)} expected repayment · {waitingChecks} waiting on checks</p>
                 </div>
@@ -250,11 +261,11 @@ export default function Dashboard() {
                         headers={['Invoice', 'Client', 'Amount', 'Status', 'Action']}
                         emptyTitle="No invoices yet"
                         emptyDescription="Create an invoice to see advance options."
-                        emptyAction={
-                            <button className="btn btn-primary btn-sm" onClick={() => navigate('/invoices/new')}>
-                                <Icon name="plus" /> Create invoice
-                            </button>
-                        }
+                        // emptyAction={
+                        //     <button className="btn btn-primary btn-sm" onClick={() => navigate('/invoices/new')}>
+                        //         <Icon name="plus" /> Create invoice
+                        //     </button>
+                        // }
                         rows={invoices.slice(0, 5).map((invoice) => [
                             <button
                                 className="link-button"

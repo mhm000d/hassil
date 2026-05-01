@@ -52,13 +52,11 @@ export default function Invoices() {
             target = `/advances/${advance.id}`
 
             if (advance.status === 'PendingClientConfirmation') {
-                title = 'Client confirmation needed'
-                hint = 'Open the confirmation link for this invoice.'
-                label = 'Open link'
-                icon = 'link'
-                target = advance.clientConfirmationToken
-                    ? `/client/confirm/${advance.clientConfirmationToken}`
-                    : `/advances/${advance.id}`
+                title = 'Waiting on client'
+                hint = 'Hassil will track the client confirmation.'
+                label = 'Track'
+                icon = 'review'
+                target = `/advances/${advance.id}`
                 tone = 'warning'
             } else if (advance.status === 'PendingReview') {
                 title = 'Under review'
@@ -138,9 +136,9 @@ export default function Invoices() {
             <div className="card">
                 <div className="card-header">
                     <h2 className="card-title">Invoice portfolio</h2>
-                    <button className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
-                        <Icon name="plus" /> Create Invoice
-                    </button>
+                    {/*<button className="btn btn-primary" onClick={() => navigate('/invoices/new')}>*/}
+                    {/*    <Icon name="plus" /> Create Invoice*/}
+                    {/*</button>*/}
                 </div>
                 {error && (
                     <div className="feedback-item error mb-18">

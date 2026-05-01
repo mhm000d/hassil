@@ -70,8 +70,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </div>
                     <div className="header-context">
                         <strong>{pageTitle}</strong>
-                        <span>{authUser?.accountType === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'}</span>
-                        <em>Verified profile</em>
+                        {/*<span>{authUser?.accountType === 'Freelancer' ? 'Invoice Discounting' : 'Invoice Factoring'}</span>*/}
+                        {/*<em>Verified profile</em>*/}
                     </div>
                     <div className="top-actions header-actions">
                         {/*<button type="button" className="btn btn-ghost">*/}

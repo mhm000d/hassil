@@ -3036,6 +3036,7 @@ tbody tr.clickable:hover, tbody tr:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px;
+  min-width: 0;
 }
 
 .detail-item span {
@@ -3051,6 +3052,10 @@ tbody tr.clickable:hover, tbody tr:hover {
 .detail-item strong {
   color: var(--text);
   font-size: 14px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .disclosure-panel {

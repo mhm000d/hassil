@@ -379,7 +379,7 @@ export default function AdminReview() {
             <>
                 <Breadcrumbs items={[{ label: 'Admin review', onClick: () => navigate('/admin') }, { label: invoice.invoiceNumber }]} />
                 <PageHeading title="Admin review detail" description="Review invoice details, checklist results, score, and recommended action." />
-                {error && <p className="error-text mb-18">{error}</p>}
+                {error && <p className="error-text mb-18">Please login again. {error}</p>}
                 <div className={`admin-decision-desk ${decisionResult || actionResult ? decisionTone : ''}`}>
                     <div className="admin-decision-copy">
                         <span className="small-label">Decision desk</span>

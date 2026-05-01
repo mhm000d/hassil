@@ -233,8 +233,7 @@ export default function InvoiceAdvance() {
                 ]}
             />
             <PageHeading title="Advance quote" description="Review the amount, flat fee, and repayment path before submitting." />
-            <div className="grid-2 wide-left">
-                <div>
+            <>
                     <div className="quote-box quote-box-highlight">
                         <div className="card-header">
                             <h2 className="card-title">Advance proposal</h2>
@@ -340,42 +339,7 @@ export default function InvoiceAdvance() {
                             <Icon name="advance" /> {submitting ? 'Submitting request...' : 'Submit advance request'}
                         </button>
                     </div>
-                </div>
-
-                <div className="card card-gold">
-                    <h2 className="card-title">Eligibility checks</h2>
-                    <div className="verification-list mt-16">
-                        {[
-                            {
-                                label: evidenceCount > 0
-                                    ? `Optional evidence added (${evidenceCount} file${evidenceCount === 1 ? '' : 's'})`
-                                    : 'Optional evidence not attached',
-                                ok: true,
-                            },
-                            {
-                                label: `Requested advance within ${formatCurrency(quote.maxEligibleInvoiceAmount, invoice.currency)} funding limit`,
-                                ok: fundingLimitEligible,
-                            },
-                            { label: 'Due date is inside the accepted window', ok: dueDateEligible },
-                        ].map((check) => (
-                            <div key={check.label} className={`verification-item ${check.ok ? 'ok' : 'bad'}`}>
-                                <span>{check.ok ? 'OK' : 'Check'}</span>
-                                <p>{check.label}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {quote.eligibilityMessages.length > 0 ? (
-                        <div className="risk-flags mt-16">
-                            {quote.eligibilityMessages.map((message) => (
-                                <div key={message} className="risk-flag-item">{message}</div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="soft-text mt-16">This invoice fits the current advance rules.</p>
-                    )}
-                </div>
-            </div>
+            </>
         </>
     )
 }
