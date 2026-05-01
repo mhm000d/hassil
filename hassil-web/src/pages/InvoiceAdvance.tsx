@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { AdvanceQuote, Invoice } from '../types'
-import { daysUntilDate, formatCurrency } from '../utils/formatters'
+import { formatCurrency } from '../utils/formatters'
 import { useInvoices, useAdvances } from '../hooks'
 import PageHeading from '../components/PageHeading'
 import ModelBadge from '../components/ModelBadge'
@@ -205,9 +205,6 @@ export default function InvoiceAdvance() {
         )
     }
 
-    const evidenceCount = invoice.documentCount ?? invoice.documents.length
-    const daysUntilDue = daysUntilDate(invoice.dueDate)
-    const dueDateEligible = daysUntilDue >= 0 && daysUntilDue <= 90
     const fundingLimitEligible = quote.advanceAmount <= quote.maxEligibleInvoiceAmount
     const maxRequestedAdvance = Math.min(invoice.amount * quote.maxAdvancePercent, quote.maxEligibleInvoiceAmount)
     const amountMatchesQuote = Math.abs(Number(requestedAmount) - quote.advanceAmount) < 0.01
