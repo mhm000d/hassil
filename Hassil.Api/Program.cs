@@ -126,25 +126,37 @@ static string ResolvePostgresConnectionString(IConfiguration configuration)
 
 static string ConvertPostgresUrlToConnectionString(string connectionString)
 {
+    // If it's not a PostgreSQL URI, return as-is (it's already in Npgsql format)
     if (!connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
         !connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
     {
+        // Clean up any invalid properties in standard connection strings
+        connectionString = connectionString.Replace("Trust Server Certificate=true;", "");
+        connectionString = connectionString.Replace(";Trust Server Certificate=true", "");
         return connectionString;
     }
 
-    var uri = new Uri(connectionString);
-    var userInfo = uri.UserInfo.Split(':', 2);
-    var builder = new NpgsqlConnectionStringBuilder
+    try
     {
-        Host = uri.Host,
-        Port = uri.Port > 0 ? uri.Port : 5432,
-        Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
-        Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
-        Database = uri.AbsolutePath.TrimStart('/'),
-        SslMode = SslMode.Require
-    };
+        var uri = new Uri(connectionString);
+        var userInfo = uri.UserInfo.Split(':', 2);
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
+            Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
+            Database = uri.AbsolutePath.TrimStart('/'),
+            SslMode = SslMode.Require
+        };
 
-    return builder.ConnectionString;
+        return builder.ConnectionString;
+    }
+    catch
+    {
+        // If URI conversion fails, return original string
+        return connectionString;
+    }
 }
 
 using (var scope = app.Services.CreateScope())
