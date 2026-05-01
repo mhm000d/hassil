@@ -23,11 +23,12 @@ public class OnboardingService(
 
         var email = NormalizeEmail(request.Email);
         await EnsureEmailAvailableAsync(email, ct);
+        await EnsureRegistrationNumberAvailableAsync(request.RegistrationNumber, ct);
 
         var user = User.CreateSmallBusiness(
             email:              email,
             businessName:       request.BusinessName,
-            registrationNumber: request.RegistrationNumber,
+            registrationNumber: request.RegistrationNumber.Trim(),
             phone:              request.Phone,
             country:            request.Country);
 
@@ -90,6 +91,14 @@ public class OnboardingService(
         var exists = await dbContext.Users.AnyAsync(u => u.Email == email, ct);
         if (exists)
             throw new ConflictException("A user with this email already exists.", "EMAIL_ALREADY_EXISTS");
+    }
+
+    private async Task EnsureRegistrationNumberAvailableAsync(string registrationNumber, CancellationToken ct)
+    {
+        var trimmed = registrationNumber.Trim();
+        var exists = await dbContext.SmallBusinessProfiles.AnyAsync(p => p.RegistrationNumber == trimmed, ct);
+        if (exists)
+            throw new ConflictException("A business with this registration number already exists.", "REGISTRATION_NUMBER_ALREADY_EXISTS");
     }
 
     private AuthResult IssueAuthResult(User user)

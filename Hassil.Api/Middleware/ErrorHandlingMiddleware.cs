@@ -1,4 +1,5 @@
 using Hassil.Api.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Hassil.Api.Middleware;
 
@@ -21,6 +22,20 @@ public class ErrorHandlingMiddleware(
                 error:      ex.Message,
                 code:       ex.Code,
                 details:    ex.Details);
+        }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(
+                ex,
+                "Database update failed. TraceId={TraceId}",
+                context.TraceIdentifier);
+
+            await WriteErrorAsync(
+                context,
+                statusCode: StatusCodes.Status409Conflict,
+                error:      "A database update failed.",
+                code:       "DATABASE_UPDATE_ERROR",
+                details:    environment.IsDevelopment() ? ex.InnerException?.Message ?? ex.Message : null);
         }
         catch (Exception ex)
         {
